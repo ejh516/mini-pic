@@ -1,8 +1,8 @@
 vpath %.cpp src/
-vpath %.o		obj/
 
 PROGRAM=mini-pic
 
+CXXFLAGS = -std=c++20 -O2 -g -fopenmp
 
 all: $(PROGRAM)
 
@@ -12,7 +12,7 @@ $(PROGRAM):
 	$(CXX) -o $@ $^ $(CXXFLAGS)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o obj/$@ -Jobj
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -rf obj/*  $(PROGRAM)
+	rm -rf *.o  $(PROGRAM)
