@@ -780,7 +780,7 @@ int main() {
     OutputMesh(ts,volume, solver.uh, solver.ef, ions.den);
 
     /*output particles*/
-    OutputParticles(ions.particles);    s/demoi
+    OutputParticles(ions.particles);
     if (trace::enabled) trace::current.write_profile("trace.csv");
 
     return 0;
