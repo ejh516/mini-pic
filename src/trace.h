@@ -61,7 +61,7 @@ class Trace {
                        << "number_of_calls"
                        << std::endl;
 
-            for(const auto func: function_list) {
+            for(const auto& func: function_list) {
                 if (!func.second.start_time) {
                     trace_file << func.first << ","
                                << func.second.total_time << ","
@@ -74,7 +74,8 @@ class Trace {
         };
 
         void enter(std::string func_name) {
-            if (!function_list.contains(func_name)) {
+            // if (!function_list.contains(func_name)) {
+            if (function_list.find(func_name) == function_list.end()) {
                 function_list.insert(std::make_pair(func_name, TraceElement()));
                 function_list[func_name].name = func_name;
             }

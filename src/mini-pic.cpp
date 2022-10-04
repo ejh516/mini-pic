@@ -4,8 +4,7 @@
   See https://www.particleincell.com/2015/fem-pic/ for more information
 
   To compile and run:
-    mkdir results
-    g++ -std=c++11 -O2 fem-pic.cpp -o fem-pic
+    g++ -std=c++10 -O2 fem-pic.cpp -o fem-pic
     ./fem-pic
 
 */
@@ -122,7 +121,7 @@ public:
     void addFe(double *F, int e, double fe[4]); /*adds contributions from element force vector*/
 
     double evalNa(int a, double xi, double eta, double zeta);
-    void getNax(double nx[3], int e, int a, double xi, double eta, double zeta);
+    void getNax(double nx[3], int e, int a);
     void inverse(double M[3][3], double V[3][3]);
     void computePhi(double *ion_den);
     void buildF1Vector(double *ion_den);
@@ -131,7 +130,7 @@ public:
     void updateEf();
 
     /*evaluates ef in cell e. Since constant field in cell, just copy*/
-    void evalEf(double res[3], int e, double lc[3]) {for (int i=0;i<3;i++) res[i]=ef[e][i];}
+    void evalEf(double res[3], int e) {for (int i=0;i<3;i++) res[i]=ef[e][i];}
 
     void buildJmatrix();
 
@@ -325,7 +324,7 @@ double FESolver::evalNa(int a, double xi, double eta, double zeta) {
 
 /*returns derivative of N[a] at some logical point
 since we are using linear elements, these are constant in each element*/
-void FESolver::getNax(double nx[3], int e, int a, double xi, double eta, double zeta) {
+void FESolver::getNax(double nx[3], int e, int a) {
     for (int d=0;d<3;d++)
         nx[d] = NX[e][a][d];
 }
@@ -409,7 +408,6 @@ void FESolver::inverse(double M[3][3], double V[3][3]) { TRACE_ME;
 
 /*Newton Rhapson solver, input is the ion density*/
 void FESolver::solveNonLinear(double *ion_den) { TRACE_ME;
-    const double tol = 1e-2;
 
     /*allocate memory for y*/
     double *y = new double[neq];
@@ -534,11 +532,8 @@ void FESolver::preAssembly() { TRACE_ME;
                         for (int i=0;i<n_int;i++) {
                             double nax[3],nbx[3];
 
-                            double xi = 0.5*(l[i]+1);    /*not used!*/
-                            double eta = 0.5*(l[j]+1);
-                            double zeta = 0.5*(l[k]+1);
-                            getNax(nax,e,a,xi,eta,zeta);
-                            getNax(nbx,e,b,xi,eta,zeta);
+                            getNax(nax,e,a);
+                            getNax(nbx,e,b);
 
                             /*dot product*/
                             double dot=0;
@@ -685,7 +680,7 @@ void FESolver::updateEf() { TRACE_ME;
         for (int a=0;a<4;a++) {
             int A = tet.con[a];
             double nx[3];
-            getNax(nx,e,a,0.5,0.5,0.5);
+            getNax(nx,e,a);
             /*minus sign since negative gradient*/
             for (int d=0;d<3;d++) ef[e][d]-=nx[d]*uh[A];
         }
@@ -717,11 +712,6 @@ int main() {
         !LoadSurfaceMesh("inlet.dat",volume,INLET) ||
         !LoadSurfaceMesh("sphere.dat",volume,SPHERE)) return -1;
 
-    // Create the results directory if needed
-    if (!filesystem::exists("data/results")) {
-        filesystem::create_directories("data/results");
-    }
-
     /*instantiate solver*/
     FESolver solver(volume);
 
@@ -730,7 +720,6 @@ int main() {
     solver.n0 = PLASMA_DEN;
     solver.kTe = 2;
 
-    int n_elements = volume.elements.size();
     int n_nodes = volume.nodes.size();
 
 
@@ -1042,7 +1031,7 @@ bool LoadSurfaceMesh(const string file_name, Volume &volume, NodeType node_type)
 /*saves volume mesh*/
 void OutputMesh(int ts, Volume &volume, double *phi, double **ef, double *ion_den) { TRACE_ME;
     stringstream ss;
-    ss<<"data/results/mesh_"<<setfill('0')<<setw(4)<<ts+1<<".vtu";
+    ss<<"mesh_"<<setfill('0')<<setw(4)<<ts+1<<".vtu";
     ofstream out(ss.str());
     if (!out.is_open()) {cerr<<"Failed to open file "<<ss.str()<<endl;exit(-1);}
 
@@ -1250,7 +1239,7 @@ from the surface triangles making up the inlet face*/
 
         /*rewind velocity*/
         double ef_part[3];
-        solver.evalEf(ef_part, part.cell_index, part.lc);
+        solver.evalEf(ef_part, part.cell_index);
 
         for (int i=0;i<3;i++)
             part.vel[i] -= ions.charge/ions.mass*ef_part[i]*(0.5*dt);
@@ -1274,7 +1263,7 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, double dt) {
 
         /*update particle velocity*/
         double ef_part[3];
-        solver.evalEf(ef_part, part.cell_index, part.lc);
+        solver.evalEf(ef_part, part.cell_index);
 
         for (int i=0;i<3;i++)
             part.vel[i] += ions.charge/ions.mass*ef_part[i]*dt;
