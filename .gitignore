@@ -38,3 +38,8 @@ mini-pic
 # Other files
 .tags
 build
+
+# Example data output files
+*.csv
+*.vtu
+*.vtp
