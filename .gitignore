@@ -38,6 +38,7 @@ mini-pic
 # Other files
 .tags
 build
+release
 
 # Example data output files
 *.csv

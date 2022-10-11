@@ -29,7 +29,6 @@ Trace trace::current = Trace("__TRACE_BASE__");
 
 
 /*PROTOTYPES*/
-void SampleParticle (Particle &part, Volume &volume);
 void InjectIons(Species &ions, Volume &volume, FESolver &solver, double dt);
 void MoveParticles(Species &ions, Volume &volume, FESolver &solver, double dt);
 
@@ -75,7 +74,7 @@ int main() {
 
     /*main loop*/
     int ts;
-    for (ts=0;ts<10;ts++) {
+    for (ts=0;ts<100;ts++) {
         /*sample new particles*/
         InjectIons(ions, volume, solver, dt);
 

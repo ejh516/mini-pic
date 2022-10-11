@@ -34,12 +34,15 @@ struct TraceElement {
 
 class Trace {
     private:
+        double entry_time = 0;
+        double exit_time = 0;
+        double trace_start;
         std::string name;
         std::vector<TraceElement*> callstack;
         std::unordered_map<std::string, TraceElement> function_list;
 
     public:
-        Trace(std::string name_): name(std::move(name_)) { };
+        Trace(std::string name_);
 
         void write_callstack();
         void write_profile(std::string filename);
