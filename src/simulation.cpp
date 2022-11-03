@@ -12,42 +12,42 @@
 #include "simulation.h"
 
 
-int Simulation::initialise(std::string filename) {
-r   return 0;
+Simulation::Simulation(std::string filename) {
+    throw "Simulation::initialise not yet implemented";
+}
+
+Simulation::~Simulation() {
+
 }
 
 void Simulation::step() {
-    /*sample new particles*/
-    InjectIons(ions, volume, solver, dt);
+    ions.inject(mesh);
 
-    /*update velocity and move particles*/
-    MoveParticles(ions, volume, solver, dt);
+    ions.updatePositions(mesh, e_field);
 
-    /*check values*/
-    double max_den=0;
-    for (int n=0;n<n_nodes;n++) if (ions.den[n]>max_den) max_den=ions.den[n];
+    ions.updateDensity(mesh)
+    
+    potential.calculate(mesh, ions.density);
 
-    /*call potential solver*/
-    solver.computePhi(ions.den);
+    e_field.calculate(mesh, potential);
 
-    solver.updateEf();
+}
 
-    simulation.time += simulation.dt;
+void Simulation::writeOutputs() {
+    throw "Simulation::writeOutputs not yet implemented";
 }
 
 void Simulation::run() {
     int timestep = 0;
     while (time < max_time) {
-        simulation.step();
-        if ((timestep+1)%10==0) OutputMesh(timestep, volume, solver.uh, solver.ef, ions.den);
+        step();
+        if ((timestep+1)%10==0) writeOutputs();
 
         std::cout<<"Timestep: " << timestep
                  <<"\t np:"     << ions.particles.size()
-                 <<"\t max den:"<< max_den<<std::endl;
+                 <<"\t max den:"<< ions.max_den << std::endl;
 
         timestep++;
     }
-
-
 }
 

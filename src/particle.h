@@ -1,5 +1,5 @@
 /*==============================================================================*
- * SIMULATION
+ * PARTICLE_H
  *------------------------------------------------------------------------------*
  * Author:  Ed Higgins <ed.higgins@york.ac.uk>
  *------------------------------------------------------------------------------*
@@ -8,32 +8,22 @@
  * This code is distributed under the MIT license.
  *==============================================================================*/
 
-#ifndef SIMULATION_H
-#define SIMULATION_H
-
-#include <string>
+#ifndef PARTICLE_H
+#define PARTICLE_H
 
 #include "mesh.h"
-#include "species.h"
 
-class Simulation {
+class Particle {
     public:
         // Attributes
-        double time = 0; // seconds
-        double max_time = 1e-9; // seconds
-                                //
-        Mesh mesh;
-        Species ions;
-        // Field<vector<double>> e_field;
-        // Field<double> potential;
+        double pos[3];
+        double vel[3];
+        std::vector<double> weights;    /*particle's weights*/
+        int cell_index;    /*last cell known to contain this particle*/
 
         // Methods
-        Simulation(std::string filename);
-        void run();
-        void step();
-        void writeOutputs();
-        void ~Simulation(std::string filename);
+        Particle(double pos[3]);
+        bool getElement(Mesh mesh, bool search);
 };
 
-
-#endif /* !SIMULATION_H */
+#endif /* !PARTICLE_H */
