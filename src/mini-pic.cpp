@@ -115,60 +115,56 @@ here we just sample on a known plane. A generic code should instead sample
 from the surface triangles making up the inlet face*/
  void InjectIons(Species &ions, Volume &volume, FESolver &solver, double dt) { TRACE_ME;
     /*set area of the k=0 face, this should be the sum of triangle areas on the inlet*/
-    double area = 0.2*0.2;
+    for (auto face: volume.inlet_faces) {
 
-    /*number of real ions per sec, given prescribed density and velocity*/
-    double num_per_sec = PLASMA_DEN*ION_VELOCITY*area;
+        /*number of real ions per sec, given prescribed density and velocity*/
+        double num_per_sec = PLASMA_DEN*ION_VELOCITY*face.area;
 
-    /*number of ions to generate in this time step*/
-    double num_real = num_per_sec*dt;
+        /*number of ions to generate in this time step*/
+        double num_real = num_per_sec*dt;
 
-    /*fraction number of macroparticles*/
-    double fnum_mp = num_real/ions.spwt + ions.rem;
+        /*fraction number of macroparticles*/
+        double fnum_mp = num_real/ions.spwt + ions.rem;
 
-    /*integer number of macroparticles*/
-    int num_mp = (int)fnum_mp;
+        /*integer number of macroparticles*/
+        int num_mp = (int)fnum_mp;
 
-    /*update reminder*/
-    ions.rem = fnum_mp-num_mp;
+        /*update reminder*/
+        ions.rem = fnum_mp-num_mp;
 
-    /*sample particles*/
-    for (int p=0;p<num_mp;p++) {
-        /*new particle*/
-        Particle part;
+        /*sample particles*/
+        for (int p=0;p<num_mp;p++) {
+            /*new particle*/
+            Particle part;
 
-        /*sample random position on the inlet face*/
-        part.pos[0] = -0.1 + 0.2*rnd();
-        part.pos[1] = -0.1 + 0.2*rnd();
-        part.pos[2] = 0;
+            /*sample random position on the inlet face*/
+            double a = rnd();
+            double b = rnd();
+            if ((a+b) > 1)  {
+                a = 1-a;
+                b = 1-b;
+            }
 
-        /*injecting cold beam*/
-        part.vel[0] = 0;
-        part.vel[1] = 0;
-        part.vel[2] = ION_VELOCITY;
+            for (int i=0; i<3; i++) {
+                part.pos[i] = a*face.u[i] + b*face.v[i] + volume.nodes[face.con[0]].pos[i];
 
-        /*set initial tetrahedron*/
-        for (part.cell_index = 0; part.cell_index<(int)volume.elements.size(); part.cell_index++) {
-            bool inside = XtoLtet(part,volume,false);
-            if (!inside) continue;    /*go to next tetrahedron*/
-            else break; /*break out once we found the tet*/
+                /*injecting cold beam*/
+                part.vel[i] = face.normal[i] * ION_VELOCITY;
+            }
+
+            /*set initial tetrahedron*/
+            part.cell_index = face.cell_con;
+
+            /*rewind velocity*/
+            double ef_part[3];
+            solver.evalEf(ef_part, part.cell_index);
+
+            for (int i=0;i<3;i++)
+                part.vel[i] -= ions.charge/ions.mass*ef_part[i]*(0.5*dt);
+
+            /*add to list*/
+            ions.particles.push_back(part);
         }
-
-        /*sanity check, should not happen*/
-        if (part.cell_index>=(int)volume.elements.size()) {
-            std::cerr<<"Failed to find initial element"<<std::endl;
-            continue;
-        }
-
-        /*rewind velocity*/
-        double ef_part[3];
-        solver.evalEf(ef_part, part.cell_index);
-
-        for (int i=0;i<3;i++)
-            part.vel[i] -= ions.charge/ions.mass*ef_part[i]*(0.5*dt);
-
-        /*add to list*/
-        ions.particles.push_back(part);
     }
 }
 

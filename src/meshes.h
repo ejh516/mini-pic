@@ -44,10 +44,13 @@ struct Tetra {
 
 /* Definition of a triangle for the intlet faces*/
 struct InletFace {
-    InletFace(int nodes[3], double speed);
-    int node_ids[3];     // IDs of Nodes comprising the face
-    double inlet_vel[3]; // Inlet velocity normal to the face
-    int vol_con;
+    InletFace(int n1, int n2, int n3) {con[0]=n1, con[1]=n2, con[3]=n3;}
+    int con[3];     // IDs of Nodes comprising the face
+    double area;
+    double u[3];
+    double v[3];
+    int cell_con;
+    double normal[3]; // Inlet velocity normal to the face int vol_con;
 };
 
 /*definition of a volume*/

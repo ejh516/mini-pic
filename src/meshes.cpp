@@ -22,6 +22,8 @@
 #include "particles.h"
 #include "meshes.h"
 
+const double ION_VELOCITY = 7000;
+
 /*loads and initializes volume mesh*/
 bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     /*open file*/
@@ -279,30 +281,66 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
 
             /*flipping nodes 2 & 3 to get positive volumes*/
             volume.inlet_faces.emplace_back(n1-1, n2-1, n3-1);
-            volume.inlet_faces.back().vol_con = -1;
+            volume.inlet_faces.back().cell_con = -1;
 
             // Find the volume element that attaches to the inlet surface
             for (size_t v=0;v<volume.elements.size(); v++) {
                 int matching_nodes = 0;
-                for (int element_node: volume.elements[v].cell_con) {
-                    if (element_node == n1 || element_node == n2 || element_node == n3) {
+                for (int element_node: volume.elements[v].con) {
+                    if (element_node == n1-1 || element_node == n2-1 || element_node == n3-1) {
                         matching_nodes += 1;
                     }
                 }
                 if (matching_nodes == 3) {
-                    if (volume.inlet_faces.back().vol_con == -1) {
-                         volume.inlet_faces.back().vol_con = v;
+                    if (volume.inlet_faces.back().cell_con == -1) {
+                         volume.inlet_faces.back().cell_con = v;
                     } else {
                         std::cerr<<"Inlet surface attached to more than one volume element"<<index<<std::endl;
                         exit(-1);
                     }
                 }
             }
-            if ( volume.inlet_faces.back().vol_con == -1) {
+            if ( volume.inlet_faces.back().cell_con == -1) {
                 std::cerr<<"No volume element attached to inlet surface"<<index<<std::endl;
                 exit(-1);
             }
 
+            // Set the inlet velocity normal to the inlet surface
+            double normal[3];
+            for (int i=0; i<3; i++) {
+                volume.inlet_faces.back().u[i] = volume.nodes[n2-1].pos[i] - volume.nodes[n1-1].pos[i];
+                volume.inlet_faces.back().v[i] = volume.nodes[n3-1].pos[i] - volume.nodes[n1-1].pos[i];
+            }
+
+            normal[0] = volume.inlet_faces.back().u[1]*volume.inlet_faces.back().v[2] 
+                          - volume.inlet_faces.back().u[2]*volume.inlet_faces.back().v[1];
+            normal[1] = volume.inlet_faces.back().u[2]*volume.inlet_faces.back().v[0] 
+                          - volume.inlet_faces.back().u[0]*volume.inlet_faces.back().v[2];
+            normal[2] = volume.inlet_faces.back().u[0]*volume.inlet_faces.back().v[1] 
+                          - volume.inlet_faces.back().u[1]*volume.inlet_faces.back().v[0];
+
+            double normal_len = sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
+
+            for (int i=0; i<3; i++) {
+                volume.inlet_faces.back().normal[i] = normal[i]/normal_len;
+            }
+            volume.inlet_faces.back().area = normal_len / 2;
+
+            std::cout << "Found inlet face:" << std::endl;
+            std::cout << "  nodes = (" << volume.nodes[n1].pos[0] << ", "
+                                       << volume.nodes[n1].pos[1] << ", "
+                                       << volume.nodes[n1].pos[2] << ")" << std::endl;
+            std::cout << "           " << volume.nodes[n2].pos[0] << ", "
+                                       << volume.nodes[n2].pos[1] << ", "
+                                       << volume.nodes[n2].pos[2] << ")" << std::endl;
+            std::cout << "           " << volume.nodes[n3].pos[0] << ", "
+                                       << volume.nodes[n3].pos[1] << ", "
+                                       << volume.nodes[n3].pos[2] << ")" << std::endl;
+            std::cout << "  normal = (" << normal[0]/normal_len << ", "
+                                        << normal[1]/normal_len << ", "
+                                        << normal[2]/normal_len << "), "
+                                        << "length = " << normal_len << std::endl;
+            std::cout << "  area = " << volume.inlet_faces.back().area << std::endl << std::endl;
         }
     }
 
