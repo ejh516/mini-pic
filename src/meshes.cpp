@@ -1,7 +1,9 @@
 /*==============================================================================*
  * MESHES
  *------------------------------------------------------------------------------*
- * Author:  Ed Higgins <ed.higgins@york.ac.uk>
+ * Maintainer: Ed Higgins <ed.higgins@york.ac.uk>
+ * Based on `fem-pic.cpp` by Lubos Brieda 
+ * See https://www.particleincell.com/2015/fem-pic/ for more information
  *------------------------------------------------------------------------------*
  * Version: 0.1.1, 2022-10-05
  *------------------------------------------------------------------------------*
@@ -262,6 +264,46 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
 
         if (index<1 || index>nn) {std::cerr<<"Incorrect node number "<<index<<std::endl;continue;}
         volume.nodes[index-1].type=node_type;
+    }
+
+    if (node_type == INLET) {
+        for (int e=0;e<n_elements;e++) {
+            int index, type;
+            int n1, n2, n3;
+
+            in >> index >> type;
+
+            if (type!=203) {std::string s; getline(in,s);continue;}
+
+            in >> n1 >> n2 >> n3;
+
+            /*flipping nodes 2 & 3 to get positive volumes*/
+            volume.inlet_faces.emplace_back(n1-1, n2-1, n3-1);
+            volume.inlet_faces.back().vol_con = -1;
+
+            // Find the volume element that attaches to the inlet surface
+            for (size_t v=0;v<volume.elements.size(); v++) {
+                int matching_nodes = 0;
+                for (int element_node: volume.elements[v].cell_con) {
+                    if (element_node == n1 || element_node == n2 || element_node == n3) {
+                        matching_nodes += 1;
+                    }
+                }
+                if (matching_nodes == 3) {
+                    if (volume.inlet_faces.back().vol_con == -1) {
+                         volume.inlet_faces.back().vol_con = v;
+                    } else {
+                        std::cerr<<"Inlet surface attached to more than one volume element"<<index<<std::endl;
+                        exit(-1);
+                    }
+                }
+            }
+            if ( volume.inlet_faces.back().vol_con == -1) {
+                std::cerr<<"No volume element attached to inlet surface"<<index<<std::endl;
+                exit(-1);
+            }
+
+        }
     }
 
     std::cout<<" Done loading "<<file_name<<std::endl;

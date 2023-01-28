@@ -40,7 +40,7 @@ int main() {
     Volume volume;
     if (!LoadVolumeMesh("mesh.dat",volume) ||
         !LoadSurfaceMesh("inlet.dat",volume,INLET) ||
-        !LoadSurfaceMesh("sphere.dat",volume,SPHERE)) return -1;
+        !LoadSurfaceMesh("fixed.dat",volume,FIXED)) return -1;
 
     /*instantiate solver*/
     FESolver solver(volume);
@@ -56,7 +56,7 @@ int main() {
     /*initialize solver "g" array*/
     for (int n=0;n<n_nodes;n++) {
         if (volume.nodes[n].type==INLET) solver.g[n]=0;    /*phi_inlet*/
-        else if (volume.nodes[n].type==SPHERE) solver.g[n]=-100; /*phi_sphere*/
+        else if (volume.nodes[n].type==FIXED) solver.g[n]=-100; /*fixed phi points*/
         else solver.g[n]=0;    /*default*/
     }
 

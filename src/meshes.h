@@ -1,7 +1,9 @@
 /*==============================================================================*
  * MESHES
  *------------------------------------------------------------------------------*
- * Author:  Ed Higgins <ed.higgins@york.ac.uk>
+ * Maintainer: Ed Higgins <ed.higgins@york.ac.uk>
+ * Based on `fem-pic.cpp` by Lubos Brieda 
+ * See https://www.particleincell.com/2015/fem-pic/ for more information
  *------------------------------------------------------------------------------*
  * Version: 0.1.1, 2022-10-05
  *------------------------------------------------------------------------------*
@@ -17,7 +19,7 @@
 #include "particles.h"
 
 /*node type*/
-enum NodeType {NORMAL,OPEN,INLET,SPHERE};
+enum NodeType {NORMAL,OPEN,INLET,FIXED};
 
 /*definition of a node*/
 struct Node {
@@ -40,10 +42,19 @@ struct Tetra {
     int cell_con[4];    /*index corresponds to the face opposite the i-th node*/
 };
 
+/* Definition of a triangle for the intlet faces*/
+struct InletFace {
+    InletFace(int nodes[3], double speed);
+    int node_ids[3];     // IDs of Nodes comprising the face
+    double inlet_vel[3]; // Inlet velocity normal to the face
+    int vol_con;
+};
+
 /*definition of a volume*/
 struct Volume {
     std::vector <Node> nodes;
     std::vector <Tetra> elements;
+    std::vector <InletFace> inlet_faces;
 };
 
 bool LoadVolumeMesh(const std::string file_name, Volume &volume);
