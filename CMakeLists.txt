@@ -14,10 +14,18 @@ add_executable(mini-pic ${SOURCES})
 
 set_property(TARGET mini-pic PROPERTY CXX_STANDARD 20)
 
+find_package(BLAS)
+find_package(LAPACK)
+if(LAPACK_FOUND AND BLAS_FOUND)
+   set(lapackblas_libraries ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+endif()
+
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(mini-pic PUBLIC OpenMP::OpenMP_CXX)
+  set(omp_libraries OpenMP::OpenMP_CXX)
 endif()
+
+target_link_libraries(mini-pic PUBLIC ${lapackblas_libraries} ${omp_libraries})
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -g")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0")
