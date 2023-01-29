@@ -24,6 +24,8 @@ class FESolver {
 public:
     double **K;        /*global stiffness matrix, should use a sparse matrix*/
     double **J;        /*Jacobian matrix*/
+    double *Amat;      /*A matrix for Lapack*/
+    double *Bvec;      /*B vector for Lapack*/
     double *F0;        /*"fh" and "fg" parts of the global force vector*/
     double *F1;        /*"ff" part of the force vector*/
 
@@ -61,6 +63,7 @@ public:
     void buildF1Vector(double *ion_den);
     void solveNonLinear(double *d);
     void solveLinear(double **K, double *d, double *F);    /*solves Kd=F for d*/
+    void solveLinearLapack(double **K, double *d, double *F);    /*solves Kd=F for d*/
     void updateEf();
 
     /*evaluates ef in cell e. Since constant field in cell, just copy*/

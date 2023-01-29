@@ -325,22 +325,6 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
                 volume.inlet_faces.back().normal[i] = normal[i]/normal_len;
             }
             volume.inlet_faces.back().area = normal_len / 2;
-
-            std::cout << "Found inlet face:" << std::endl;
-            std::cout << "  nodes = (" << volume.nodes[n1].pos[0] << ", "
-                                       << volume.nodes[n1].pos[1] << ", "
-                                       << volume.nodes[n1].pos[2] << ")" << std::endl;
-            std::cout << "           " << volume.nodes[n2].pos[0] << ", "
-                                       << volume.nodes[n2].pos[1] << ", "
-                                       << volume.nodes[n2].pos[2] << ")" << std::endl;
-            std::cout << "           " << volume.nodes[n3].pos[0] << ", "
-                                       << volume.nodes[n3].pos[1] << ", "
-                                       << volume.nodes[n3].pos[2] << ")" << std::endl;
-            std::cout << "  normal = (" << normal[0]/normal_len << ", "
-                                        << normal[1]/normal_len << ", "
-                                        << normal[2]/normal_len << "), "
-                                        << "length = " << normal_len << std::endl;
-            std::cout << "  area = " << volume.inlet_faces.back().area << std::endl << std::endl;
         }
     }
 

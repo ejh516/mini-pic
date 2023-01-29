@@ -74,7 +74,7 @@ int main() {
 
     /*main loop*/
     int ts;
-    for (ts=0;ts<100;ts++) {
+    for (ts=0;ts<500;ts++) {
         /*sample new particles*/
         InjectIons(ions, volume, solver, dt);
 
@@ -176,8 +176,9 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, double dt) {
     for (int i=0;i<n_nodes;i++) ions.den[i] = 0;
 
     /*move particles*/
-    auto part_it = ions.particles.begin();
-    while(part_it != ions.particles.end()) {
+    std::vector<Particle> new_particles;
+    #pragma omp parallel for schedule(static,64)
+    for (auto part_it = ions.particles.begin(); part_it != ions.particles.end(); part_it++) {
         Particle &part = *part_it;
 
         /*update particle velocity*/
@@ -197,6 +198,7 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, double dt) {
             /*now we know that we are inside this tetrahedron, scatter*/
             double sum=0;
             for (int v=0;v<4;v++) {
+                #pragma omp atomic update
                 ions.den[tet.con[v]]+=part.lc[v];
                 sum+=part.lc[v];    /*for testing*/
             }
@@ -204,10 +206,13 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, double dt) {
             /*testing*/
             if (std::abs(sum-1.0)>0.001) std::cout<<sum<<std::endl;
 
-            part_it++;
+                #pragma omp critical
+                {
+                    new_particles.push_back(part);
+                }
         }
-        else part_it = ions.particles.erase(part_it);    /*outside the mesh*/
     }
+    ions.particles = new_particles;
 
     /*convert to ion density*/
     for (int n=0;n<n_nodes;n++) ions.den[n] *= ions.spwt/volume.nodes[n].volume;

@@ -1,3 +1,4 @@
+
 /*==============================================================================*
  * FESOLVER
  *------------------------------------------------------------------------------*
@@ -14,10 +15,15 @@
 #include <iostream>
 #include <iomanip>
 #include <math.h>
+#include <stdio.h>
 
 #include "trace.h"
 #include "maths.h"
 #include "FESolver.h"
+
+extern "C" {
+    int dgesv_( int* n, int* nrhs, double* a, int* lda, int* ipiv, double* b, int* ldb, int* info );
+}
 
 /*FESolver*/
 FESolver::FESolver(Volume &volume):volume(volume) { TRACE_ME;
@@ -39,6 +45,15 @@ FESolver::FESolver(Volume &volume):volume(volume) { TRACE_ME;
     J = new double*[neq];
     for (int i=0;i<neq;i++) J[i] = new double[neq];
     std::cout<<"Allocated "<<neq<<"x"<<neq<<" Jacobian matrix"<<std::endl;
+
+    /*allocate neq*neq A matrix for lapack*/
+    Amat = new double[neq*neq];
+    std::cout<<"Allocated "<<neq<<"x"<<neq<<" A matrix"<<std::endl;
+
+    /*allocate neq b vector for lapack*/
+    Bvec = new double[neq];
+    std::cout<<"Allocated "<<neq<<"x"<<neq<<" B vector"<<std::endl;
+
 
     /*allocate F0 and F1 vectors*/
     F0 = new double[neq];
@@ -120,6 +135,7 @@ FESolver::~FESolver() { TRACE_ME;
 
     delete[] K;
     delete[] J;
+    delete[] Amat;
     delete[] LM;
     delete[] F0;
     delete[] F1;
@@ -293,6 +309,7 @@ void FESolver::solveNonLinear(double *ion_den) { TRACE_ME;
             sum+=y[u]*y[u];
         }
         L2 = sqrt(sum)/neq;
+
         if (L2<1e-2) {
             std::cout<<" NR converged in "<<it+1<<" iterations with L2="<<std::setprecision(3)<<L2<<std::endl;
             converged=true;
@@ -301,7 +318,10 @@ void FESolver::solveNonLinear(double *ion_den) { TRACE_ME;
 
     }
 
-    if (!converged) std::cerr<<"NR failed to converge, L2 = "<<L2<<std::endl;
+    if (!converged) {
+        std::cerr<<"NR failed to converge, L2 = "<<L2<<std::endl;
+        exit(-1);
+    }
     delete[] y;
     delete[] G;
 
@@ -461,6 +481,34 @@ void FESolver::buildF1Vector(double *ion_den) { TRACE_ME;
     }
 
     delete[] f;
+}
+
+void FESolver::solveLinearLapack(double **A, double *x, double *b) { TRACE_ME;
+
+    int n = neq;
+    int nrhs = 1;
+    int lda =  neq;
+    int ldb = neq;
+    int ipiv[neq];
+    int info = 0;
+
+    for (int i=0; i<neq; i++) {
+        Bvec[i] = b[i];
+    }
+
+    for (int i=0; i<neq; i++) {
+        for (int j=0; j<neq; j++) {
+            Amat[i*neq + j] = A[i][j];
+        }
+    }
+
+    int status = dgesv_(&n, &nrhs, Amat, &lda, ipiv, Bvec, &ldb, &info );
+
+    if (info != 0 || status != 0) std::cerr << "Lapack failed to work for some reason" << std::endl;
+
+    for (int i=0; i<neq; i++) {
+        x[i] = Bvec[i];
+    }
 }
 
 /*simple Gauss-Seidel solver for A*x=b*/

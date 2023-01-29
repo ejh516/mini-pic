@@ -44,7 +44,7 @@ struct Tetra {
 
 /* Definition of a triangle for the intlet faces*/
 struct InletFace {
-    InletFace(int n1, int n2, int n3) {con[0]=n1, con[1]=n2, con[3]=n3;}
+    InletFace(int n1, int n2, int n3) {con[0]=n1, con[1]=n2, con[2]=n3;}
     int con[3];     // IDs of Nodes comprising the face
     double area;
     double u[3];
