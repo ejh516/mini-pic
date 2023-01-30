@@ -22,8 +22,6 @@
 #include "particles.h"
 #include "meshes.h"
 
-const double ION_VELOCITY = 7000;
-
 /*loads and initializes volume mesh*/
 bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     /*open file*/
@@ -281,6 +279,7 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
 
             /*flipping nodes 2 & 3 to get positive volumes*/
             volume.inlet_faces.emplace_back(n1-1, n2-1, n3-1);
+
             volume.inlet_faces.back().cell_con = -1;
 
             // Find the volume element that attaches to the inlet surface
@@ -312,12 +311,12 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
                 volume.inlet_faces.back().v[i] = volume.nodes[n3-1].pos[i] - volume.nodes[n1-1].pos[i];
             }
 
-            normal[0] = volume.inlet_faces.back().u[1]*volume.inlet_faces.back().v[2] 
-                          - volume.inlet_faces.back().u[2]*volume.inlet_faces.back().v[1];
-            normal[1] = volume.inlet_faces.back().u[2]*volume.inlet_faces.back().v[0] 
-                          - volume.inlet_faces.back().u[0]*volume.inlet_faces.back().v[2];
-            normal[2] = volume.inlet_faces.back().u[0]*volume.inlet_faces.back().v[1] 
-                          - volume.inlet_faces.back().u[1]*volume.inlet_faces.back().v[0];
+            normal[0] = volume.inlet_faces.back().u[2]*volume.inlet_faces.back().v[1] 
+                          - volume.inlet_faces.back().u[1]*volume.inlet_faces.back().v[2];
+            normal[1] = volume.inlet_faces.back().u[0]*volume.inlet_faces.back().v[2] 
+                          - volume.inlet_faces.back().u[2]*volume.inlet_faces.back().v[0];
+            normal[2] = volume.inlet_faces.back().u[1]*volume.inlet_faces.back().v[0] 
+                          - volume.inlet_faces.back().u[0]*volume.inlet_faces.back().v[1];
 
             double normal_len = sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
 
@@ -325,6 +324,13 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
                 volume.inlet_faces.back().normal[i] = normal[i]/normal_len;
             }
             volume.inlet_faces.back().area = normal_len / 2;
+
+            std::cout << "New inlet face" << std::endl;
+            std::cout << "    nodes = " << volume.nodes[n1-1].pos[0] << " " << volume.nodes[n1-1].pos[1] << " " << volume.nodes[n1-1].pos[2] << "\n";
+            std::cout << "            " << volume.nodes[n2-1].pos[0] << " " << volume.nodes[n2-1].pos[1] << " " << volume.nodes[n2-1].pos[2] << "\n";
+            std::cout << "            " << volume.nodes[n3-1].pos[0] << " " << volume.nodes[n3-1].pos[1] << " " << volume.nodes[n3-1].pos[2] << "\n";
+            std::cout << "   normal = " << volume.inlet_faces.back().normal[0] << " " << volume.inlet_faces.back().normal[1] << " " << volume.inlet_faces.back().normal[2] << "\n";
+
         }
     }
 

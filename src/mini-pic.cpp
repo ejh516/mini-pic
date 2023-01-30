@@ -21,8 +21,11 @@
 #include "FESolver.h"
 
 /*constants*/
-const double PLASMA_DEN = 1e10;
-const double ION_VELOCITY = 7000;
+const double PLASMA_DEN     = 1e11;
+const double ION_VELOCITY   = 7000;
+const int    MAX_ITER       = 250;
+const double WALL_POTENTIAL = 100;
+const double dt             = 1e-7;
 
 int trace::enabled = 1;
 Trace trace::current = Trace("__TRACE_BASE__");
@@ -56,7 +59,7 @@ int main() {
     /*initialize solver "g" array*/
     for (int n=0;n<n_nodes;n++) {
         if (volume.nodes[n].type==INLET) solver.g[n]=0;    /*phi_inlet*/
-        else if (volume.nodes[n].type==FIXED) solver.g[n]=-100; /*fixed phi points*/
+        else if (volume.nodes[n].type==FIXED) solver.g[n]=-WALL_POTENTIAL; /*fixed phi points*/
         else solver.g[n]=0;    /*default*/
     }
 
@@ -64,7 +67,6 @@ int main() {
     solver.startAssembly();
     solver.preAssembly();    /*this will form K and F0*/
 
-    double dt = 1e-7;
 
     /*ions species*/
     Species ions(n_nodes);
@@ -74,25 +76,28 @@ int main() {
 
     /*main loop*/
     int ts;
-    for (ts=0;ts<500;ts++) {
+    for (ts=0;ts<MAX_ITER;ts++) {
         /*sample new particles*/
         InjectIons(ions, volume, solver, dt);
 
         /*update velocity and move particles*/
         MoveParticles(ions, volume, solver, dt);
 
-        /*check values*/
-        double max_den=0;
-        for (int n=0;n<n_nodes;n++) if (ions.den[n]>max_den) max_den=ions.den[n];
-
         /*call potential solver*/
         solver.computePhi(ions.den);
 
         solver.updateEf();
 
+        /*check values*/
+        double max_den=0;
+        for (int n=0;n<n_nodes;n++) if (ions.den[n]>max_den) max_den=ions.den[n];
+        double max_phi=0;
+        for (int n=0;n<n_nodes;n++) if (abs(solver.uh[n])>max_phi) max_phi=abs(solver.uh[n]);
+
+
         if ((ts+1)%10==0) OutputMesh(ts,volume, solver.uh, solver.ef, ions.den);
 
-        std::cout<<"ts: "<<ts<<"\t np:"<<ions.particles.size()<<"\t max den:"<<max_den<<std::endl;
+        std::cout<<"ts: "<<ts<<"\t np:"<<ions.particles.size()<<"\t max den:"<<max_den<<"\t max |phi|:"<<max_phi<<std::endl;
     }
 
     /*output mesh*/
@@ -177,7 +182,7 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, double dt) {
 
     /*move particles*/
     std::vector<Particle> new_particles;
-    #pragma omp parallel for schedule(static,64)
+    #pragma omp parallel for
     for (auto part_it = ions.particles.begin(); part_it != ions.particles.end(); part_it++) {
         Particle &part = *part_it;
 

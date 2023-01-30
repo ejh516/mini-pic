@@ -298,7 +298,7 @@ void FESolver::solveNonLinear(double *ion_den) { TRACE_ME;
 
         buildJmatrix();
 
-        solveLinear(J,y,G);
+        solveLinearLapack(J,y,G);
 
         /*now that we have y, update solution */
         for (int n=0;n<neq;n++) d[n]-=y[n];
