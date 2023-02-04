@@ -243,7 +243,7 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
 }
 
 /*loads nodes from a surface mesh file and sets them to the specified node type*/
-bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_type) { TRACE_ME;
+bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_type, bool invert_normal) { TRACE_ME;
     /*open file*/
     std::ifstream in(file_name);
     if (!in.is_open()) {std::cerr<<"Failed to open "<<file_name<<std::endl; return false;}
@@ -317,6 +317,11 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
                           - volume.inlet_faces.back().u[2]*volume.inlet_faces.back().v[0];
             normal[2] = volume.inlet_faces.back().u[1]*volume.inlet_faces.back().v[0] 
                           - volume.inlet_faces.back().u[0]*volume.inlet_faces.back().v[1];
+            if (invert_normal) {
+                normal[0] = -normal[0];
+                normal[1] = -normal[1];
+                normal[2] = -normal[2];
+            }
 
             double normal_len = sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
 
@@ -324,13 +329,6 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
                 volume.inlet_faces.back().normal[i] = normal[i]/normal_len;
             }
             volume.inlet_faces.back().area = normal_len / 2;
-
-            std::cout << "New inlet face" << std::endl;
-            std::cout << "    nodes = " << volume.nodes[n1-1].pos[0] << " " << volume.nodes[n1-1].pos[1] << " " << volume.nodes[n1-1].pos[2] << "\n";
-            std::cout << "            " << volume.nodes[n2-1].pos[0] << " " << volume.nodes[n2-1].pos[1] << " " << volume.nodes[n2-1].pos[2] << "\n";
-            std::cout << "            " << volume.nodes[n3-1].pos[0] << " " << volume.nodes[n3-1].pos[1] << " " << volume.nodes[n3-1].pos[2] << "\n";
-            std::cout << "   normal = " << volume.inlet_faces.back().normal[0] << " " << volume.inlet_faces.back().normal[1] << " " << volume.inlet_faces.back().normal[2] << "\n";
-
         }
     }
 

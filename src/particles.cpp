@@ -15,6 +15,7 @@
 
 #include "trace.h"
 #include "particles.h"
+#include "FESolver.h"
 
 /*saves particle data*/
 void OutputParticles(std::vector<Particle> &particles) { TRACE_ME;
@@ -43,6 +44,30 @@ void OutputParticles(std::vector<Particle> &particles) { TRACE_ME;
     out.close();
 }
 
+Species::Species(int n_nodes) {
+    den=new double[n_nodes];
+    rem=0;
+}
 
+Species::Species(int n_nodes, Species::Name n) {
+    den=new double[n_nodes];
+    rem=0;
+    switch (n) {
+        case Species::Duterium:
+            charge=1*QE;
+            mass = 2*AMU;
+            spwt = 2e2;
+            break;
 
+        case Species::Oxygen:
+            charge=1*QE;
+            mass = 16*AMU;
+            spwt = 2e2;
+            break;
 
+        default:
+            break;
+
+    }
+
+}

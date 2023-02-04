@@ -14,6 +14,7 @@
 #include <vector>
 #include <stdlib.h>
 
+#include "parameters.h"
 #include "trace.h"
 #include "maths.h"
 #include "particles.h"
@@ -21,36 +22,38 @@
 #include "FESolver.h"
 
 /*constants*/
-const double PLASMA_DEN     = 1e11;
-const double ION_VELOCITY   = 7000;
-const int    MAX_ITER       = 250;
-const double WALL_POTENTIAL = 100;
-const double dt             = 1e-7;
 
 int trace::enabled = 1;
 Trace trace::current = Trace("__TRACE_BASE__");
 
 
 /*PROTOTYPES*/
-void InjectIons(Species &ions, Volume &volume, FESolver &solver, double dt);
-void MoveParticles(Species &ions, Volume &volume, FESolver &solver, double dt);
+void InjectIons(Species &ions, Volume &volume, FESolver &solver, Parameters params);
+void MoveParticles(Species &ions, Volume &volume, FESolver &solver, Parameters params);
 
 
 /**************** MAIN **************************/
-int main() {
+int main(int argc, char **argv) {
 
-    /*instantiate volume*/
+    // Read in the simulation parameters from the file provided
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+        exit(0);
+    }
+    Parameters params(argv[1]);
+
+    // Load the meshes defined in the parameters file
     Volume volume;
-    if (!LoadVolumeMesh("mesh.dat",volume) ||
-        !LoadSurfaceMesh("inlet.dat",volume,INLET) ||
-        !LoadSurfaceMesh("fixed.dat",volume,FIXED)) return -1;
+    if (!LoadVolumeMesh(params.mesh_files["global_mesh"],volume) ||
+        !LoadSurfaceMesh(params.mesh_files["inlet_mesh"],volume,INLET, params.invert_normals) ||
+        !LoadSurfaceMesh(params.mesh_files["wall_mesh"],volume,FIXED, params.invert_normals)) return -1;
 
     /*instantiate solver*/
     FESolver solver(volume);
 
     /*set reference paramaters*/
     solver.phi0 = 0;
-    solver.n0 = PLASMA_DEN;
+    solver.n0 = params.plasma_den;
     solver.kTe = 2;
 
     int n_nodes = volume.nodes.size();
@@ -59,7 +62,7 @@ int main() {
     /*initialize solver "g" array*/
     for (int n=0;n<n_nodes;n++) {
         if (volume.nodes[n].type==INLET) solver.g[n]=0;    /*phi_inlet*/
-        else if (volume.nodes[n].type==FIXED) solver.g[n]=-WALL_POTENTIAL; /*fixed phi points*/
+        else if (volume.nodes[n].type==FIXED) solver.g[n]=-params.wall_potential; /*fixed phi points*/
         else solver.g[n]=0;    /*default*/
     }
 
@@ -69,19 +72,19 @@ int main() {
 
 
     /*ions species*/
-    Species ions(n_nodes);
+    Species ions(n_nodes, params.plasma_species);
     ions.charge=1*QE;
     ions.mass = 16*AMU;
     ions.spwt = 2e2;
 
     /*main loop*/
     int ts;
-    for (ts=0;ts<MAX_ITER;ts++) {
+    for (ts=0;ts<params.max_iter;ts++) {
         /*sample new particles*/
-        InjectIons(ions, volume, solver, dt);
+        InjectIons(ions, volume, solver, params);
 
         /*update velocity and move particles*/
-        MoveParticles(ions, volume, solver, dt);
+        MoveParticles(ions, volume, solver, params);
 
         /*call potential solver*/
         solver.computePhi(ions.den);
@@ -118,15 +121,15 @@ int main() {
 /*** Samples particle on the inlet surface
 here we just sample on a known plane. A generic code should instead sample
 from the surface triangles making up the inlet face*/
- void InjectIons(Species &ions, Volume &volume, FESolver &solver, double dt) { TRACE_ME;
+ void InjectIons(Species &ions, Volume &volume, FESolver &solver, Parameters params) { TRACE_ME;
     /*set area of the k=0 face, this should be the sum of triangle areas on the inlet*/
     for (auto face: volume.inlet_faces) {
 
         /*number of real ions per sec, given prescribed density and velocity*/
-        double num_per_sec = PLASMA_DEN*ION_VELOCITY*face.area;
+        double num_per_sec = params.plasma_den*params.ion_velocity*face.area;
 
         /*number of ions to generate in this time step*/
-        double num_real = num_per_sec*dt;
+        double num_real = num_per_sec*params.dt;
 
         /*fraction number of macroparticles*/
         double fnum_mp = num_real/ions.spwt + ions.rem;
@@ -154,7 +157,7 @@ from the surface triangles making up the inlet face*/
                 part.pos[i] = a*face.u[i] + b*face.v[i] + volume.nodes[face.con[0]].pos[i];
 
                 /*injecting cold beam*/
-                part.vel[i] = face.normal[i] * ION_VELOCITY;
+                part.vel[i] = face.normal[i] * params.ion_velocity;
             }
 
             /*set initial tetrahedron*/
@@ -165,7 +168,7 @@ from the surface triangles making up the inlet face*/
             solver.evalEf(ef_part, part.cell_index);
 
             for (int i=0;i<3;i++)
-                part.vel[i] -= ions.charge/ions.mass*ef_part[i]*(0.5*dt);
+                part.vel[i] -= ions.charge/ions.mass*ef_part[i]*(0.5*params.dt);
 
             /*add to list*/
             ions.particles.push_back(part);
@@ -174,7 +177,7 @@ from the surface triangles making up the inlet face*/
 }
 
 /*updates ion velocities and positions*/
-void MoveParticles(Species &ions, Volume &volume, FESolver &solver, double dt) {    TRACE_ME;
+void MoveParticles(Species &ions, Volume &volume, FESolver &solver, Parameters params) {    TRACE_ME;
     int n_nodes = (int) volume.nodes.size();
 
     /*reset ion density*/
@@ -191,10 +194,10 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, double dt) {
         solver.evalEf(ef_part, part.cell_index);
 
         for (int i=0;i<3;i++)
-            part.vel[i] += ions.charge/ions.mass*ef_part[i]*dt;
+            part.vel[i] += ions.charge/ions.mass*ef_part[i]*params.dt;
 
         /*update particle positions*/
-        for (int i=0;i<3;i++) part.pos[i]+=part.vel[i]*dt;
+        for (int i=0;i<3;i++) part.pos[i]+=part.vel[i]*params.dt;
 
         bool inside = XtoLtet(part,volume);
 

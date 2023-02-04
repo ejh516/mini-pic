@@ -61,7 +61,7 @@ struct Volume {
 };
 
 bool LoadVolumeMesh(const std::string file_name, Volume &volume);
-bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_type);
+bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_type, bool invert_faces);
 void OutputMesh(int ts, Volume &volume, double *phi, double **ef, double *ion_den);
 
 bool XtoLtet(Particle &part, Volume &volume, bool search=true);

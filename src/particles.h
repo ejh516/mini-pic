@@ -14,6 +14,7 @@
 #define PARTICLES_H
 
 #include <vector>
+#include <string>
 
 /*particle*/
 struct Particle {
@@ -26,6 +27,7 @@ struct Particle {
 /*species class*/
 class Species {
 public:
+    enum Name {Oxygen, Duterium};
     std::vector<Particle> particles;
     double *den;
     double spwt;
@@ -33,9 +35,11 @@ public:
     double charge;
     double rem;        /*fractional particle reminder*/
 
-    Species (int n_nodes) {den=new double[n_nodes];rem=0;}
+    Species (int n_nodes);
+    Species (int n_nodes, Name species);
     ~Species () {delete[] den;}
 };
+
 
 void OutputParticles(std::vector<Particle> &particles);
 
