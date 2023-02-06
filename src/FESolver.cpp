@@ -266,7 +266,7 @@ void FESolver::inverse(double M[3][3], double V[3][3]) { TRACE_ME;
 
     double idet=0;
     if (fabs(det)<1e-12) {
-        std::cerr<<"Matrix is not invertible, setting to [0]!"<<std::endl;}
+        std::cerr<<"Matrix is not invertible, |det M| = " << fabs(det) << "! setting to [0]."<<std::endl;}
     else idet=1/det;
 
     /*1/det*/
@@ -298,7 +298,7 @@ void FESolver::solveNonLinear(double *ion_den) { TRACE_ME;
 
         buildJmatrix();
 
-        solveLinearLapack(J,y,G);
+        solveLinear(J,y,G);
 
         /*now that we have y, update solution */
         for (int n=0;n<neq;n++) d[n]-=y[n];

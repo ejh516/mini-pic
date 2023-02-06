@@ -123,6 +123,7 @@ here we just sample on a known plane. A generic code should instead sample
 from the surface triangles making up the inlet face*/
  void InjectIons(Species &ions, Volume &volume, FESolver &solver, Parameters params) { TRACE_ME;
     /*set area of the k=0 face, this should be the sum of triangle areas on the inlet*/
+
     for (auto face: volume.inlet_faces) {
 
         /*number of real ions per sec, given prescribed density and velocity*/

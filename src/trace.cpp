@@ -11,6 +11,8 @@
 #include "trace.h"
 #include <string>
 
+#define DEBUG false
+
 double _walltime() {
     return omp_get_wtime();
 }
@@ -71,7 +73,10 @@ void Trace::write_profile(std::string filename) {
 };
 
 void Trace::enter(std::string func_name) {
+    if (DEBUG) std::cout << "Entering " << func_name << std::endl;
+
     auto start_time = _walltime();
+
 
     // if (!function_list.contains(func_name)) {
     if (function_list.find(func_name) == function_list.end()) {
@@ -87,6 +92,7 @@ void Trace::enter(std::string func_name) {
 };
 
 void Trace::exit(std::string func_name) {
+    if (DEBUG) std::cout << "Exiting " << func_name << std::endl;
     auto end_time = _walltime();
 
     auto total_time = end_time - function_list[func_name].start_time;
