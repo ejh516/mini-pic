@@ -275,15 +275,42 @@ void FESolver::inverse(double M[3][3], double V[3][3]) { TRACE_ME;
             V[i][j]*=idet;
 }
 
-/*Newton Rhapson solver, input is the ion density*/
-void FESolver::solveNonLinear(double *ion_den) { TRACE_ME;
-
+/*Wrapper for different solve methods*/
+void FESolver::solve(double *ion_den, Method method) { TRACE_ME;
     /*allocate memory for y*/
     double *y = new double[neq];
     double *G = new double[neq];
 
     /*clear y values*/
     for (int i=0;i<neq;i++) y[i]=0;
+
+    if (method == NonLinear) {
+        solveNonLinear(ion_den, y, G);
+
+    } else if (method == Linear or method == Lapack) {
+        /*builds the "ff" part of the force vector*/
+        buildF1Vector(ion_den);
+
+        /*form G=K*d-F*/
+        matVecMultiply(G,K,d, neq);    //G=K*d
+        vecVecSubtract(G,G,F0, neq); //G=G-F giving us G=K*d-F
+        vecVecSubtract(G,G,F1, neq);
+
+        buildJmatrix();
+
+        if      (method == Linear) solveLinear(J, y, G);
+        else if (method == Lapack) solveLinearLapack(J, y, G);
+
+        /*now that we have y, update solution */
+        for (int n=0;n<neq;n++) d[n]-=y[n];
+    }
+
+    delete[] y;
+    delete[] G;
+}
+
+/*Newton Rhapson solver, input is the ion density*/
+void FESolver::solveNonLinear(double *ion_den, double *y, double *G) { TRACE_ME;
 
     bool converged = false;
     double L2;
@@ -322,8 +349,6 @@ void FESolver::solveNonLinear(double *ion_den) { TRACE_ME;
         std::cerr<<"NR failed to converge, L2 = "<<L2<<std::endl;
         exit(-1);
     }
-    delete[] y;
-    delete[] G;
 
 }
 
@@ -554,10 +579,10 @@ void FESolver::solveLinear(double **A, double *x, double *b) { TRACE_ME;
 }
 
 /*wrapper for solving the non-linear Poisson's equation*/
-void FESolver::computePhi(double *ion_den) { TRACE_ME;
+void FESolver::computePhi(double *ion_den, Method method) { TRACE_ME;
 
     /*solve the system*/
-    solveNonLinear(ion_den);
+    solve(ion_den, method);
 
     /*combine d and g to phi*/
     for (int n=0;n<n_nodes;n++) {

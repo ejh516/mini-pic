@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
         MoveParticles(ions, volume, solver, params);
 
         /*call potential solver*/
-        solver.computePhi(ions.den);
+        solver.computePhi(ions.den, params.fesolver_method);
 
         solver.updateEf();
 
@@ -200,7 +200,9 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, Parameters p
         /*update particle positions*/
         for (int i=0;i<3;i++) part.pos[i]+=part.vel[i]*params.dt;
 
+        trace::current.enter("XtoLtet");
         bool inside = XtoLtet(part,volume);
+        trace::current.exit("XtoLtet");
 
         if (inside) {
             Tetra &tet = volume.elements[part.cell_index];

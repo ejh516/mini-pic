@@ -58,6 +58,20 @@ Parameters::Parameters(std::string filename) {
             else if (key == "plasma_species") {
                 if (std::regex_match(value, std::regex("D(uterium)?"))) plasma_species = Species::Duterium;
                 else if (std::regex_match(value, std::regex("O(xygen)?"))) plasma_species = Species::Oxygen;
+                else {
+                    std::cerr << "Invalid plasma species: '" << value << "'" << std::endl;
+                    exit(-1);
+                }
+            }
+            
+            else if (key == "fesolver_method") {
+                if      (std::regex_match(value, std::regex("nonlinear")), std::regex_constants::icase) fesolver_method = FESolver::NonLinear;
+                else if (std::regex_match(value, std::regex("linear")), std::regex_constants::icase) fesolver_method = FESolver::Linear;
+                else if (std::regex_match(value, std::regex("lapack")), std::regex_constants::icase) fesolver_method = FESolver::Lapack;
+                else {
+                    std::cerr << "Invalid fesolver_method: '" << value << "'" << std::endl;
+                    exit(-1);
+                }
             }
             
             else {

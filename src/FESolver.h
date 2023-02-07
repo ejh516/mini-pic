@@ -15,13 +15,15 @@
 
 #include "meshes.h"
 
-const double EPS0 = 8.8541878e-12;  /*permittivity of free space*/
-const double QE = 1.602e-19;        /*elementary charge*/
-const double AMU = 1.660538921e-27;        // kg, atomic mass unit
+const double EPS0 = 8.8541878e-12;   /*permittivity of free space*/
+const double QE   = 1.602e-19;       /*elementary charge*/
+const double AMU  = 1.660538921e-27; /*atomic mass unit*/
+const double K    = 1.380649e-23;    /*Boltzmann's  constant*/
 
 /*solver class*/
 class FESolver {
 public:
+    enum Method {NonLinear, Linear, Lapack};
     double **K;        /*global stiffness matrix, should use a sparse matrix*/
     double **J;        /*Jacobian matrix*/
     double *Amat;      /*A matrix for Lapack*/
@@ -59,9 +61,10 @@ public:
     double evalNa(int a, double xi, double eta, double zeta);
     void getNax(double nx[3], int e, int a);
     void inverse(double M[3][3], double V[3][3]);
-    void computePhi(double *ion_den);
+    void computePhi(double *ion_den, Method method);
     void buildF1Vector(double *ion_den);
-    void solveNonLinear(double *d);
+    void solve(double *d, Method method);
+    void solveNonLinear(double *d, double *y, double *G);
     void solveLinear(double **K, double *d, double *F);    /*solves Kd=F for d*/
     void solveLinearLapack(double **K, double *d, double *F);    /*solves Kd=F for d*/
     void updateEf();

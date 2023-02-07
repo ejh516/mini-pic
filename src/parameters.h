@@ -15,6 +15,7 @@
 #include <map>
 
 #include "particles.h"
+#include "FESolver.h"
 
 class Parameters{
     public:
@@ -30,6 +31,7 @@ class Parameters{
         Parameters(std::string fileanme);
 
         Species::Name plasma_species = Species::Duterium;
+        FESolver::Method fesolver_method = FESolver::NonLinear;
 
 };
 
