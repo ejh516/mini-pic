@@ -54,10 +54,11 @@ int main(int argc, char **argv) {
     /*set reference paramaters*/
     solver.phi0 = 0;
     solver.n0 = params.plasma_den;
-    solver.kTe = 2;
+    solver.kTe = K * params.electron_temperature;
 
     int n_nodes = volume.nodes.size();
 
+    std:: cout << "Debye length = " << sqrt(EPS0*solver.kTe / (params.plasma_den * pow(QE, 2)))  << "m" << std::endl;
 
     /*initialize solver "g" array*/
     for (int n=0;n<n_nodes;n++) {
@@ -200,9 +201,9 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, Parameters p
         /*update particle positions*/
         for (int i=0;i<3;i++) part.pos[i]+=part.vel[i]*params.dt;
 
-        trace::current.enter("XtoLtet");
+        //trace::current.enter("XtoLtet");
         bool inside = XtoLtet(part,volume);
-        trace::current.exit("XtoLtet");
+        //trace::current.exit("XtoLtet");
 
         if (inside) {
             Tetra &tet = volume.elements[part.cell_index];

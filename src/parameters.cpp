@@ -37,6 +37,7 @@ Parameters::Parameters(std::string filename) {
 
             if (key == "plasma_den") plasma_den = std::stod(value);
             else if (key == "ion_velocity") ion_velocity = std::stod(value);
+            else if (key == "electron_temperature") electron_temperature = std::stod(value);
             else if (key == "max_iter") max_iter = std::stoi(value);
             else if (key == "wall_potential") wall_potential = std::stod(value);
             else if (key == "dt") dt = std::stod(value);
@@ -65,13 +66,14 @@ Parameters::Parameters(std::string filename) {
             }
             
             else if (key == "fesolver_method") {
-                if      (std::regex_match(value, std::regex("nonlinear")), std::regex_constants::icase) fesolver_method = FESolver::NonLinear;
-                else if (std::regex_match(value, std::regex("linear")), std::regex_constants::icase) fesolver_method = FESolver::Linear;
-                else if (std::regex_match(value, std::regex("lapack")), std::regex_constants::icase) fesolver_method = FESolver::Lapack;
+                if      (std::regex_match(value, std::regex("nonlinear", std::regex_constants::icase))) fesolver_method = FESolver::NonLinear;
+                else if (std::regex_match(value, std::regex("linear", std::regex_constants::icase))) fesolver_method = FESolver::Linear;
+                else if (std::regex_match(value, std::regex("lapack", std::regex_constants::icase))) fesolver_method = FESolver::Lapack;
                 else {
                     std::cerr << "Invalid fesolver_method: '" << value << "'" << std::endl;
                     exit(-1);
                 }
+                std::cout << "Selected FESolver method " << fesolver_method << std::endl;
             }
             
             else {
