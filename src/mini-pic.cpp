@@ -58,7 +58,6 @@ int main(int argc, char **argv) {
 
     int n_nodes = volume.nodes.size();
 
-    std:: cout << "Debye length = " << sqrt(EPS0*solver.kTe / (params.plasma_den * pow(QE, 2)))  << "m" << std::endl;
 
     /*initialize solver "g" array*/
     for (int n=0;n<n_nodes;n++) {
@@ -185,46 +184,61 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, Parameters p
     /*reset ion density*/
     for (int i=0;i<n_nodes;i++) ions.den[i] = 0;
 
+
     /*move particles*/
-    std::vector<Particle> new_particles;
-    #pragma omp parallel for
-    for (auto part_it = ions.particles.begin(); part_it != ions.particles.end(); part_it++) {
-        Particle &part = *part_it;
+    int nthreads = omp_get_num_threads();
+    std::vector<std::vector<Particle>> new_particles(nthreads);
 
-        /*update particle velocity*/
-        double ef_part[3];
-        solver.evalEf(ef_part, part.cell_index);
+    #pragma omp parallel
+    {
 
-        for (int i=0;i<3;i++)
-            part.vel[i] += ions.charge/ions.mass*ef_part[i]*params.dt;
+        std::vector<Particle> thread_newparts;
+        #pragma omp for
+        for (auto part_it = ions.particles.begin(); part_it != ions.particles.end(); part_it++) {
+            Particle &part = *part_it;
 
-        /*update particle positions*/
-        for (int i=0;i<3;i++) part.pos[i]+=part.vel[i]*params.dt;
+            /*update particle velocity*/
+            double ef_part[3];
+            solver.evalEf(ef_part, part.cell_index);
 
-        //trace::current.enter("XtoLtet");
-        bool inside = XtoLtet(part,volume);
-        //trace::current.exit("XtoLtet");
+            for (int i=0;i<3;i++)
+                part.vel[i] += ions.charge/ions.mass*ef_part[i]*params.dt;
 
-        if (inside) {
-            Tetra &tet = volume.elements[part.cell_index];
-            /*now we know that we are inside this tetrahedron, scatter*/
-            double sum=0;
-            for (int v=0;v<4;v++) {
-                #pragma omp atomic update
-                ions.den[tet.con[v]]+=part.lc[v];
-                sum+=part.lc[v];    /*for testing*/
-            }
+            /*update particle positions*/
+            for (int i=0;i<3;i++) part.pos[i]+=part.vel[i]*params.dt;
 
-            /*testing*/
-            if (std::abs(sum-1.0)>0.001) std::cout<<sum<<std::endl;
+            //trace::current.enter("XtoLtet");
+            bool inside = XtoLtet(part,volume);
+            //trace::current.exit("XtoLtet");
 
-                #pragma omp critical
-                {
-                    new_particles.push_back(part);
+            if (inside) {
+                Tetra &tet = volume.elements[part.cell_index];
+                /*now we know that we are inside this tetrahedron, scatter*/
+                double sum=0;
+                for (int v=0;v<4;v++) {
+                    #pragma omp atomic update
+                    ions.den[tet.con[v]]+=part.lc[v];
+                    sum+=part.lc[v];    /*for testing*/
                 }
+
+                /*testing*/
+                if (std::abs(sum-1.0)>0.001) std::cout<<sum<<std::endl;
+
+                thread_newparts.push_back(part);
+            }
+        }
+
+        #pragma omp master
+        {
+            ions.particles.clear();
+        }
+
+        #pragma omp critical
+        {
+            new_particles.push_back(thread_newparts);
+            ions.particles.insert(ions.particles.end(), thread_newparts.begin(), thread_newparts.end());
         }
     }
-    ions.particles = new_particles;
 
     /*convert to ion density*/
     for (int n=0;n<n_nodes;n++) ions.den[n] *= ions.spwt/volume.nodes[n].volume;
