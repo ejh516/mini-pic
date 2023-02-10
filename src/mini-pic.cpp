@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     /*set reference paramaters*/
     solver.phi0 = 0;
     solver.n0 = params.plasma_den;
-    solver.kTe = K * params.electron_temperature;
+    solver.kTe = Kb * params.electron_temperature;
 
     int n_nodes = volume.nodes.size();
 
@@ -184,14 +184,8 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, Parameters p
     /*reset ion density*/
     for (int i=0;i<n_nodes;i++) ions.den[i] = 0;
 
-
-    /*move particles*/
-    int nthreads = omp_get_num_threads();
-    std::vector<std::vector<Particle>> new_particles(nthreads);
-
     #pragma omp parallel
     {
-
         std::vector<Particle> thread_newparts;
         #pragma omp for
         for (auto part_it = ions.particles.begin(); part_it != ions.particles.end(); part_it++) {
@@ -232,10 +226,9 @@ void MoveParticles(Species &ions, Volume &volume, FESolver &solver, Parameters p
         {
             ions.particles.clear();
         }
-
+        #pragma omp barrier
         #pragma omp critical
         {
-            new_particles.push_back(thread_newparts);
             ions.particles.insert(ions.particles.end(), thread_newparts.begin(), thread_newparts.end());
         }
     }

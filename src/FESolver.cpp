@@ -22,7 +22,26 @@
 #include "FESolver.h"
 
 extern "C" {
-    int dgesv_( int* n, int* nrhs, double* a, int* lda, int* ipiv, double* b, int* ldb, int* info );
+    int dsysv_( char* uplo,
+                int* n,
+                int* nrhs,
+                double* a,
+                int* lda,
+                int* ipiv,
+                double* b,
+                int* ldb,
+                double* work,
+                int* lwork,
+                int* info );
+
+    int dgesv_( int* n,
+                int* nrhs,
+                double* a,
+                int* lda,
+                int* ipiv,
+                double* b,
+                int* ldb,
+                int* info );
 }
 
 /*FESolver*/
@@ -296,7 +315,7 @@ void FESolver::solve(double *ion_den, Method method) { TRACE_ME;
         vecVecSubtract(G,G,F0, neq); //G=G-F giving us G=K*d-F
         vecVecSubtract(G,G,F1, neq);
 
-        buildJmatrix();
+        buildJmatrix(method);
 
         if      (method == Linear) solveLinear(J, y, G);
         else if (method == Lapack) solveLinearLapack(J, y, G);
@@ -323,7 +342,7 @@ void FESolver::solveNonLinear(double *ion_den, double *y, double *G) { TRACE_ME;
         vecVecSubtract(G,G,F0, neq); //G=G-F giving us G=K*d-F
         vecVecSubtract(G,G,F1, neq);
 
-        buildJmatrix();
+        buildJmatrix(Method::NonLinear);
 
         solveLinear(J,y,G);
 
@@ -353,7 +372,7 @@ void FESolver::solveNonLinear(double *ion_den, double *y, double *G) { TRACE_ME;
 }
 
 /*builds J matrix for NR solver*/
-void FESolver::buildJmatrix() { TRACE_ME;
+void FESolver::buildJmatrix(Method method) { TRACE_ME;
     /*first compute exponential term*/
     double *fp_term = new double[neq];
     double *FP = new double[neq];
@@ -364,10 +383,16 @@ void FESolver::buildJmatrix() { TRACE_ME;
         fp_term[n] = -QE/EPS0*n0*exp((d[n]-phi0)/kTe)*(1/kTe);
     }
 
-    /*now set J=K*/
-    for (int i=0;i<neq;i++)
-        for (int j=0;j<neq;j++)
-            J[i][j] = K[i][j];
+    /*now set J=K. If using lapack, only need to set the lower half*/
+    if (method == Lapack) {
+        for (int i=0;i<neq;i++)
+            for (int j=i;j<neq;j++)
+                J[i][j] = K[i][j];
+    } else {
+        for (int i=0;i<neq;i++)
+            for (int j=0;j<neq;j++)
+                J[i][j] = K[i][j];
+    }
 
     /*build fprime vector*/
     double fe[4];
@@ -510,11 +535,14 @@ void FESolver::buildF1Vector(double *ion_den) { TRACE_ME;
 
 void FESolver::solveLinearLapack(double **A, double *x, double *b) { TRACE_ME;
 
+    char uplo  = 'L';
     int n = neq;
     int nrhs = 1;
     int lda =  neq;
     int ldb = neq;
     int ipiv[neq];
+    double work[n];
+    int lwork = n;
     int info = 0;
 
     for (int i=0; i<neq; i++) {
@@ -527,7 +555,8 @@ void FESolver::solveLinearLapack(double **A, double *x, double *b) { TRACE_ME;
         }
     }
 
-    int status = dgesv_(&n, &nrhs, Amat, &lda, ipiv, Bvec, &ldb, &info );
+    int status = dsysv_(&uplo, &n, &nrhs, Amat, &lda, ipiv, Bvec, &ldb, work, &lwork, &info );
+    //int status = dgesv_(&n, &nrhs, Amat, &lda, ipiv, Bvec, &ldb, &info );
 
     if (info != 0 || status != 0) std::cerr << "Lapack failed to work for some reason" << std::endl;
 

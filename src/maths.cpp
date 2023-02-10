@@ -58,6 +58,7 @@ double det3(double (*M)[3]) { TRACE_ME;
 
 /*helper functions for matrix math, y=A*x */
 void matVecMultiply(double *y, double**A, double *x, int nu) { TRACE_ME;
+    #pragma omp parallel for
     for (int i=0;i<nu;i++) {
         y[i] = 0;
         for (int j=0;j<nu;j++)

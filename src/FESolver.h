@@ -18,7 +18,7 @@
 const double EPS0 = 8.8541878e-12;   /*permittivity of free space*/
 const double QE   = 1.602e-19;       /*elementary charge*/
 const double AMU  = 1.660538921e-27; /*atomic mass unit*/
-const double K    = 8.617333262e-5;    /*Boltzmann's  constant*/
+const double Kb    = 8.617333262e-5;    /*Boltzmann's  constant*/
 
 /*solver class*/
 class FESolver {
@@ -72,7 +72,7 @@ public:
     /*evaluates ef in cell e. Since constant field in cell, just copy*/
     void evalEf(double res[3], int e) {for (int i=0;i<3;i++) res[i]=ef[e][i];}
 
-    void buildJmatrix();
+    void buildJmatrix(Method method);
 
 protected:
     void computeNX();
