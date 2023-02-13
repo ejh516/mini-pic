@@ -43,21 +43,24 @@ struct Tetra {
 };
 
 /* Definition of a triangle for the intlet faces*/
-struct InletFace {
-    InletFace(int n1, int n2, int n3) {con[0]=n1, con[1]=n2, con[2]=n3;}
+struct Face {
+    Face(int n1, int n2, int n3) {con[0]=n1, con[1]=n2, con[2]=n3;}
     int con[3];     // IDs of Nodes comprising the face
     double area;
     double u[3];
     double v[3];
     int cell_con;
-    double normal[3]; // Inlet velocity normal to the face int vol_con;
+    double normal[3];
 };
 
 /*definition of a volume*/
 struct Volume {
     std::vector <Node> nodes;
     std::vector <Tetra> elements;
-    std::vector <InletFace> inlet_faces;
+    std::vector <Face> inlet_faces;
+    double avg_edge_len;
+
+    void summarize(std::ostream &out);
 };
 
 bool LoadVolumeMesh(const std::string file_name, Volume &volume);

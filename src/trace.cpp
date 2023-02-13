@@ -39,13 +39,13 @@ void Trace::write_profile(std::string filename) {
                << "number_of_calls"
                << std::endl;
 
-    for(const auto& func: function_list) {
-        if (!func.second.start_time) {
-            trace_file << func.first << ","
-                       << func.second.total_time << ","
-                       << func.second.total_time - func.second.child_time << ","
-                       << (func.second.total_time - func.second.child_time) / calculation_time << ","
-                       << func.second.num_calls
+    for(const auto& [func_name, func]: function_list) {
+        if (!func.start_time) {
+            trace_file << func_name << ","
+                       << func.total_time << ","
+                       << func.total_time - func.child_time << ","
+                       << (func.total_time - func.child_time) / calculation_time << ","
+                       << func.num_calls
                        << std::endl;
         }
     }

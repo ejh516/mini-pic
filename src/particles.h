@@ -27,7 +27,7 @@ struct Particle {
 /*species class*/
 class Species {
 public:
-    enum Name {Oxygen, Duterium};
+    enum Name {Oxygen, Deuterium};
     std::vector<Particle> particles;
     double *den;
     double spwt;

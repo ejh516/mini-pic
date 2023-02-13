@@ -13,6 +13,8 @@
 #include <fstream>
 #include <vector>
 #include <stdlib.h>
+#include <chrono>
+#include <iomanip>
 
 #include "parameters.h"
 #include "trace.h"
@@ -28,7 +30,9 @@ Trace trace::current = Trace("__TRACE_BASE__");
 
 
 /*PROTOTYPES*/
-void InjectIons(Species &ions, Volume &volume, FESolver &solver, Parameters params);
+void write_header(std::ostream& out);
+void write_footer(std::ostream& out);
+int InjectIons(Species &ions, Volume &volume, FESolver &solver, Parameters params);
 void MoveParticles(Species &ions, Volume &volume, FESolver &solver, Parameters params);
 
 
@@ -40,13 +44,21 @@ int main(int argc, char **argv) {
         std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
         exit(0);
     }
-    Parameters params(argv[1]);
+    std::string params_file = argv[1];
+
+    write_header(std::cout);
+
+
+    Parameters params(params_file);
+    params.write(std::cout);
 
     // Load the meshes defined in the parameters file
     Volume volume;
     if (!LoadVolumeMesh(params.mesh_files["global_mesh"],volume) ||
         !LoadSurfaceMesh(params.mesh_files["inlet_mesh"],volume,INLET, params.invert_normals) ||
         !LoadSurfaceMesh(params.mesh_files["wall_mesh"],volume,FIXED, params.invert_normals)) return -1;
+
+    volume.summarize(std::cout);
 
     /*instantiate solver*/
     FESolver solver(volume);
@@ -70,6 +82,7 @@ int main(int argc, char **argv) {
     solver.startAssembly();
     solver.preAssembly();    /*this will form K and F0*/
 
+    solver.summarize(std::cout);
 
     /*ions species*/
     Species ions(n_nodes, params.plasma_species);
@@ -81,8 +94,9 @@ int main(int argc, char **argv) {
     int ts;
     for (ts=0;ts<params.max_iter;ts++) {
         /*sample new particles*/
-        InjectIons(ions, volume, solver, params);
+        int n_new_particles = InjectIons(ions, volume, solver, params);
 
+        int old_nparts = ions.particles.size();
         /*update velocity and move particles*/
         MoveParticles(ions, volume, solver, params);
 
@@ -100,7 +114,12 @@ int main(int argc, char **argv) {
 
         if ((ts+1)%10==0) OutputMesh(ts,volume, solver.uh, solver.ef, ions.den);
 
-        std::cout<<"ts: "<<ts<<"\t np:"<<ions.particles.size()<<"\t max den:"<<max_den<<"\t max |phi|:"<<max_phi<<std::endl;
+        std::cout<<"ts: "<<ts
+                 <<"\t np: "<<ions.particles.size()
+                 <<" (" <<  n_new_particles << " added, "<< old_nparts - ions.particles.size() << " removed)" 
+                 <<"\t max den: "<<max_den
+                 <<"\t max |phi|: "<<max_phi
+                 <<std::endl;
     }
 
     /*output mesh*/
@@ -110,6 +129,7 @@ int main(int argc, char **argv) {
     OutputParticles(ions.particles);
     if (trace::enabled) trace::current.write_profile("trace.csv");
 
+    write_footer(std::cout);
     return 0;
 }
 
@@ -117,13 +137,29 @@ int main(int argc, char **argv) {
 /*** FUNCTIONS ***/
 
 
+void write_header(std::ostream &out) {
+    out << "MINI-PIC" << std::endl << "========" << std::endl;
+
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::localtime(&t);
+    out << "Simulation started at " << std::put_time(&tm, "%Y-%m-%d, %T") << std::endl;
+    out << std::endl;
+}
+
+void write_footer(std::ostream &out) {
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::localtime(&t);
+    out << "Simulation finished at " << std::put_time(&tm, "%Y-%m-%d, %T") << std::endl;
+}
+
 
 /*** Samples particle on the inlet surface
 here we just sample on a known plane. A generic code should instead sample
 from the surface triangles making up the inlet face*/
- void InjectIons(Species &ions, Volume &volume, FESolver &solver, Parameters params) { TRACE_ME;
+int InjectIons(Species &ions, Volume &volume, FESolver &solver, Parameters params) { TRACE_ME;
     /*set area of the k=0 face, this should be the sum of triangle areas on the inlet*/
 
+    int total_new_particles = 0;
     for (auto face: volume.inlet_faces) {
 
         /*number of real ions per sec, given prescribed density and velocity*/
@@ -174,7 +210,9 @@ from the surface triangles making up the inlet face*/
             /*add to list*/
             ions.particles.push_back(part);
         }
+        total_new_particles += num_mp;
     }
+    return total_new_particles;
 }
 
 /*updates ion velocities and positions*/

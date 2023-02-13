@@ -54,42 +54,34 @@ FESolver::FESolver(Volume &volume):volume(volume) { TRACE_ME;
         if (volume.nodes[i].type==NORMAL ||
             volume.nodes[i].type==OPEN) neq++;
 
-    std::cout<<"There are "<<neq<<" unknowns"<<std::endl;
     /*allocate neq*neq K matrix*/
     K = new double*[neq];
     for (int i=0;i<neq;i++) K[i] = new double[neq];
-    std::cout<<"Allocated "<<neq<<"x"<<neq<<" stiffness matrix"<<std::endl;
 
     /*allocate neq*neq J matrix*/
     J = new double*[neq];
     for (int i=0;i<neq;i++) J[i] = new double[neq];
-    std::cout<<"Allocated "<<neq<<"x"<<neq<<" Jacobian matrix"<<std::endl;
 
     /*allocate neq*neq A matrix for lapack*/
     Amat = new double[neq*neq];
-    std::cout<<"Allocated "<<neq<<"x"<<neq<<" A matrix"<<std::endl;
 
     /*allocate neq b vector for lapack*/
     Bvec = new double[neq];
-    std::cout<<"Allocated "<<neq<<"x"<<neq<<" B vector"<<std::endl;
 
 
     /*allocate F0 and F1 vectors*/
     F0 = new double[neq];
     F1 = new double[neq];
-    std::cout<<"Allocated two "<<neq<<"x1 force vectors"<<std::endl;
 
     n_nodes = volume.nodes.size();
     n_elements = volume.elements.size();
 
     /*allocate ID vector*/
     ID = new int[n_nodes];
-    std::cout<<"Allocated "<<n_nodes<<"x1 ID vector"<<std::endl;
 
     /*allocate location matrix, n_elements*4 */
     LM = new int*[n_elements];
     for (int e=0;e<n_elements;e++) LM[e] = new int[4];
-    std::cout<<"Allocated "<<n_elements<<"x4 location matrix"<<std::endl;
 
     /*allocate NX matrix*/
     NX = new double**[n_elements];
@@ -97,7 +89,6 @@ FESolver::FESolver(Volume &volume):volume(volume) { TRACE_ME;
         NX[e] = new double*[4];
         for (int a=0;a<4;a++) NX[e][a] = new double[3];
     }
-    std::cout<<"Allocated "<<n_elements<<"x4x3 NX matrix"<<std::endl;
 
     /*solution array*/
     d = new double[neq];
@@ -106,10 +97,8 @@ FESolver::FESolver(Volume &volume):volume(volume) { TRACE_ME;
     /*allocate memory for g and uh arrays*/
     g = new double[n_nodes];
     uh = new double[n_nodes];
-    std::cout<<"Allocated "<<n_nodes<<"x1 g and uh vector"<<std::endl;
 
     detJ = new double[n_elements];
-    std::cout<<"Allocated "<<n_elements<<"x1 detJ vector"<<std::endl;
 
     /*electric field*/
     ef = new double*[n_elements];
@@ -129,7 +118,6 @@ FESolver::FESolver(Volume &volume):volume(volume) { TRACE_ME;
         for (int a=0;a<4;a++)    /*tetrahedra*/ {
             LM[e][a] = ID[volume.elements[e].con[a]];
         }
-    std::cout<<"Built ID and LM matrix"<<std::endl;
 
     /*set quadrature points*/
     l[0]=-sqrt(1.0/3.0); l[1]=sqrt(1.0/3.0);
@@ -313,7 +301,7 @@ void FESolver::solve(double *ion_den, Method method) { TRACE_ME;
     if (method == NonLinear) {
         solveNonLinear(ion_den, y, G);
 
-    } else if (method == Linear or method == Lapack) {
+    } else if (method == GaussSeidel or method == Lapack) {
         /*builds the "ff" part of the force vector*/
         buildF1Vector(ion_den);
 
@@ -324,7 +312,7 @@ void FESolver::solve(double *ion_den, Method method) { TRACE_ME;
 
         buildJmatrix(method);
 
-        if      (method == Linear) solveLinear(J, y, G);
+        if      (method == GaussSeidel) solveLinear(J, y, G);
         else if (method == Lapack) solveLinearLapack(J, y, G);
 
         /*now that we have y, update solution */
@@ -650,3 +638,11 @@ void FESolver::updateEf() { TRACE_ME;
     }
 }
 
+void FESolver::summarize(std::ostream &out) {
+    out << "FE SOLVER INFORMATION" << std::endl
+        << "---------------------" << std::endl;
+
+    out << "  Number of unkowns: " << neq << std::endl;
+
+    out << std::endl;
+}

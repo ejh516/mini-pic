@@ -26,12 +26,14 @@ class Parameters{
         double wall_potential       = 100;
         double dt                   = 1e-7;
         std::map<std::string, std::string> mesh_files;
-        
+
         bool invert_normals   = false;
 
         Parameters(std::string fileanme);
 
-        Species::Name plasma_species = Species::Duterium;
+        void write(std::ostream &out);
+
+        Species::Name plasma_species = Species::Deuterium;
         FESolver::Method fesolver_method = FESolver::NonLinear;
 
 };

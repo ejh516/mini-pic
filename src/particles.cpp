@@ -53,7 +53,7 @@ Species::Species(int n_nodes, Species::Name n) {
     den=new double[n_nodes];
     rem=0;
     switch (n) {
-        case Species::Duterium:
+        case Species::Deuterium:
             charge=1*QE;
             mass = 2*AMU;
             spwt = 2e2;

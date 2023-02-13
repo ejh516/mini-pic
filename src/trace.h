@@ -39,10 +39,10 @@ class Trace {
         double trace_start;
         std::string name;
         std::vector<TraceElement*> callstack;
-        std::unordered_map<std::string, TraceElement> function_list;
 
     public:
         Trace(std::string name_);
+        std::unordered_map<std::string, TraceElement> function_list;
 
         void write_callstack();
         void write_profile(std::string filename);

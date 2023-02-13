@@ -23,7 +23,7 @@ const double Kb    = 8.617333262e-5;    /*Boltzmann's  constant*/
 /*solver class*/
 class FESolver {
 public:
-    enum Method {NonLinear, Linear, Lapack};
+    enum Method {NonLinear, GaussSeidel, Lapack};
     double **K;        /*global stiffness matrix, should use a sparse matrix*/
     double **J;        /*Jacobian matrix*/
     double *Amat;      /*A matrix for Lapack*/
@@ -71,6 +71,8 @@ public:
 
     /*evaluates ef in cell e. Since constant field in cell, just copy*/
     void evalEf(double res[3], int e) {for (int i=0;i<3;i++) res[i]=ef[e][i];}
+
+    void summarize(std::ostream &out);
 
     void buildJmatrix(Method method);
 

@@ -16,6 +16,7 @@
 #include <sstream>
 #include <iomanip>
 #include <map>
+#include <algorithm>
 
 
 #include "trace.h"
@@ -32,7 +33,6 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     /*read number of nodes and elements*/
     int n_nodes, n_elements;
     in>>n_nodes>>n_elements;
-    std::cout<<"Mesh contains "<<n_nodes<<" nodes and "<<n_elements<<" elements"<<std::endl;
 
     /*read the nodes*/
     for (int n=0;n<n_nodes;n++) {
@@ -40,11 +40,12 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
         double x, y, z;
 
         in >> index >> x >> y >> z;
-        if (index!=n+1) std::cout<<"Inconsistent node numbering"<<std::endl;
+        if (index!=n+1) std::cerr<<"Inconsistent node numbering"<<std::endl;
 
         volume.nodes.emplace_back(x/1000.,y/1000.,z/1000.);
     }
 
+    std::vector<double> edge_lengths;
     /*read elements, this will also contain edges and triangles*/
     for (int e=0;e<n_elements;e++) {
         int index, type;
@@ -52,12 +53,29 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
 
         in >> index >> type;
 
-        if (type!=304) {std::string s; getline(in,s);continue;}
+        if (type==304) { // Volume element
+            in >> n1 >> n2 >> n3 >> n4;
+            /*flipping nodes 2 & 3 to get positive volumes*/
+            volume.elements.emplace_back(n1-1, n2-1, n3-1, n4-1);
 
-        in >> n1 >> n2 >> n3 >> n4;
-        /*flipping nodes 2 & 3 to get positive volumes*/
-        volume.elements.emplace_back(n1-1, n2-1, n3-1, n4-1);
+        } else if (type == 102) { // Edge element
+            in >> n1 >> n2;
+            double len = 0;
+            for (int d=0; d<3; d++) {
+                len += pow(volume.nodes[n1].pos[d] - volume.nodes[n2].pos[d], 2);
+            }
+            len = sqrt(len);
+            edge_lengths.emplace_back(len);
+
+        } else {
+            std::string s; getline(in,s);continue;
+        }
     }
+    volume.avg_edge_len = 0;
+    for (auto l: edge_lengths) volume.avg_edge_len += l;
+    volume.avg_edge_len = volume.avg_edge_len / edge_lengths.size();
+
+
 
     /*reset number of nodes and elements since we skipped bunch of lines and triangles*/
     n_nodes = volume.nodes.size();
@@ -66,8 +84,6 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     std::map<int, std::vector<int>> node_con;
 
     /*compute element volumes*/
-    std::cout << "  Computing element volumes" << std::endl;
-
     for (int l=0; l<n_elements; l++) {
         Tetra &tet = volume.elements[l];
         double M[4][4];
@@ -92,7 +108,6 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     }
 
     /*precompute 3x3 determinants for LC computation*/
-    std::cout << "  Computing element determinants" << std::endl;
     for (Tetra &tet:volume.elements) {
         double M[3][3];
         /*loop over vertices*/
@@ -161,7 +176,6 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     }
 
     /*build cell connectivity, there is probably a faster way*/
-    std::cout<<"Building cell connectivity"<<std::endl;
 
     /*reset connectivities*/
     for (int l=0;l<n_elements;l++) {
@@ -215,7 +229,6 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     /*also compute node volumes by scattering cell volumes,this can only be done after 3x3 dets are computed*/
 
     /*first set all to zero*/
-    std::cout << "  Computing node volumes" << std::endl;
     for (Node &node:volume.nodes) {node.volume=0;}
 
     for (int i=0;i<n_elements;i++) {
@@ -229,7 +242,7 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
         }
 
         bool found = XtoLtet(dummy_part,volume,false);
-        if (!found) std::cout<<"something is wrong"<<std::endl;
+        if (!found) std::cerr<<"something is wrong"<<std::endl;
 
         for (int v=0;v<4;v++) {
             volume.nodes[tet.con[v]].volume += dummy_part.lc[v]*tet.volume;
@@ -248,7 +261,6 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
             }
     }
 
-    std::cout<<" Done loading "<<file_name<<std::endl;
     return true;
 }
 
@@ -261,7 +273,6 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
     /*read number of nodes and elements*/
     int n_nodes, n_elements;
     in>>n_nodes>>n_elements;
-    std::cout<<"Mesh contains "<<n_nodes<<" nodes and "<<n_elements<<" elements"<<std::endl;
 
     int nn = volume.nodes.size();
 
@@ -342,7 +353,6 @@ bool LoadSurfaceMesh(const std::string file_name, Volume &volume, NodeType node_
         }
     }
 
-    std::cout<<" Done loading "<<file_name<<std::endl;
     return true;
 }
 
@@ -469,4 +479,29 @@ bool XtoLtet(Particle &part, Volume &volume, bool search) {
     }
 
     return false;
+}
+
+void Volume::summarize(std::ostream &out) {
+    out << "MESH INFORMATION" << std::endl << "----------------" << std::endl;
+    out << "  Number of nodes          = " << nodes.size() << std::endl;
+    out << "  Number of elements       = " << elements.size() << std::endl;
+    out << "  Number of inlet faces    = " << inlet_faces.size() << std::endl;
+    out << std::endl;
+
+    double min_pos[3] = {99999,99999,99999};
+    double max_pos[3] = {0,0,0};
+    for (auto node: nodes) {
+        for (int d=0; d<3; d++) {
+            min_pos[d] = std::min(node.pos[d], min_pos[d]);
+            max_pos[d] = std::max(node.pos[d], max_pos[d]);
+        }
+    }
+
+    out << "  Simulation region: "
+        << max_pos[0] - min_pos[0] << "m x "
+        << max_pos[1] - min_pos[1] << "m x "
+        << max_pos[2] - min_pos[2] << "m" << std::endl;
+    out << "  Average edge length: " << avg_edge_len <<"m"<< std::endl;
+
+    out << std::endl;
 }

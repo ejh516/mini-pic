@@ -57,7 +57,7 @@ Parameters::Parameters(std::string filename) {
             }
 
             else if (key == "plasma_species") {
-                if (std::regex_match(value, std::regex("D(uterium)?"))) plasma_species = Species::Duterium;
+                if (std::regex_match(value, std::regex("D(uterium)?"))) plasma_species = Species::Deuterium;
                 else if (std::regex_match(value, std::regex("O(xygen)?"))) plasma_species = Species::Oxygen;
                 else {
                     std::cerr << "Invalid plasma species: '" << value << "'" << std::endl;
@@ -67,13 +67,12 @@ Parameters::Parameters(std::string filename) {
             
             else if (key == "fesolver_method") {
                 if      (std::regex_match(value, std::regex("nonlinear", std::regex_constants::icase))) fesolver_method = FESolver::NonLinear;
-                else if (std::regex_match(value, std::regex("linear", std::regex_constants::icase))) fesolver_method = FESolver::Linear;
+                else if (std::regex_match(value, std::regex("gaussseidel", std::regex_constants::icase))) fesolver_method = FESolver::GaussSeidel;
                 else if (std::regex_match(value, std::regex("lapack", std::regex_constants::icase))) fesolver_method = FESolver::Lapack;
                 else {
                     std::cerr << "Invalid fesolver_method: '" << value << "'" << std::endl;
                     exit(-1);
                 }
-                std::cout << "Selected FESolver method " << fesolver_method << std::endl;
             }
             
             else {
@@ -86,3 +85,44 @@ Parameters::Parameters(std::string filename) {
 }
 
 
+void Parameters::write(std::ostream &out) {
+
+    out << "SIMULATION PARAMETERS"  << std::endl << "---------------------" << std::endl;
+    out << "  plasma_den = " << plasma_den  << std::endl;
+    out << "  ion_velocity = " << ion_velocity << std::endl;
+    out << "  electron_temperature = " << electron_temperature << std::endl;
+    out << "  max_iter = " << max_iter << std::endl;
+    out << "  wall_potential = " << wall_potential << std::endl;
+    out << "  dt = " << dt << std::endl;
+    out << "  mesh_files:" << std::endl;
+    for (auto const &[key, val]: mesh_files) {
+        out << "    " << key << " = " << val << std::endl;
+    }
+    out << "  invert_normals = ";
+    out << (invert_normals ? "True" : "False") << std::endl;
+
+    out << "  plasma_species = ";
+    switch (plasma_species) {
+        case Species::Deuterium:
+            out << "Deuterium";
+            break;
+        case Species::Oxygen:
+            out << "Oxygen";
+            break;
+    }
+    out << std::endl;
+
+    out << "  fesolver_method = ";
+    switch (fesolver_method) {
+        case FESolver::NonLinear:
+            out << "NonLinear";
+            break;
+        case FESolver::GaussSeidel:
+            out << "GaussSeidel";
+            break;
+        case FESolver::Lapack:
+            out << "Lapack";
+            break;
+    }
+    out << std::endl << std::endl;
+}

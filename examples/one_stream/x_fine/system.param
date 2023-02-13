@@ -1,5 +1,5 @@
 # System parameters
-plasma_den     = 1e15
+plasma_den     = 1e16
 ion_velocity   = 1e8
 electron_temperature = 2e8
 wall_potential = 10000
