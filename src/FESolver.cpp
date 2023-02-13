@@ -283,8 +283,15 @@ void FESolver::inverse(double M[3][3], double V[3][3]) { TRACE_ME;
     V[2][2]=(a*e-b*d);
     double det = a*V[0][0]+b*V[1][0]+c*V[2][0];
 
+    double Vmax = 0;
+    for (int m=0;  m<3; m++) {
+        for (int n=0;  n<3; n++) {
+            Vmax = fabs(V[m][n]) > Vmax ? fabs(V[m][n]) : Vmax;
+        }
+    }
+
     double idet=0;
-    if (fabs(det)<1e-12) {
+    if (fabs(Vmax) / fabs(det) > 1e12) {
         std::cerr<<"Matrix is not invertible, |det M| = " << fabs(det) << "! setting to [0]."<<std::endl;}
     else idet=1/det;
 
@@ -576,6 +583,7 @@ void FESolver::solveLinear(double **A, double *x, double *b) { TRACE_ME;
             std::cout<<"Zero diagonal on "<<u<<std::endl;
 
     bool converged=false;
+
     for (it=0;it<10000;it++) {
         for (int u=0;u<neq;u++) {
             /*skip over unused nodes*/

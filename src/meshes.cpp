@@ -15,6 +15,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <map>
 
 
 #include "trace.h"
@@ -54,7 +55,6 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
         if (type!=304) {std::string s; getline(in,s);continue;}
 
         in >> n1 >> n2 >> n3 >> n4;
-
         /*flipping nodes 2 & 3 to get positive volumes*/
         volume.elements.emplace_back(n1-1, n2-1, n3-1, n4-1);
     }
@@ -63,8 +63,13 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     n_nodes = volume.nodes.size();
     n_elements = volume.elements.size();
 
+    std::map<int, std::vector<int>> node_con;
+
     /*compute element volumes*/
-    for (Tetra &tet:volume.elements) {
+    std::cout << "  Computing element volumes" << std::endl;
+
+    for (int l=0; l<n_elements; l++) {
+        Tetra &tet = volume.elements[l];
         double M[4][4];
 
         /*set first column to 1*/
@@ -73,11 +78,10 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
         /*loop over vertices*/
         for (int v=0;v<4;v++) {
             for (int dim=0;dim<3;dim++) {
-                M[0][dim+1] = volume.nodes[tet.con[0]].pos[dim];
-                M[1][dim+1] = volume.nodes[tet.con[1]].pos[dim];
-                M[2][dim+1] = volume.nodes[tet.con[2]].pos[dim];
-                M[3][dim+1] = volume.nodes[tet.con[3]].pos[dim];
+                M[v][dim+1] = volume.nodes[tet.con[v]].pos[dim];
             }
+
+            node_con[tet.con[v]].emplace_back(l);
         }
 
         /*volume is (1/6)*det4(M)*/
@@ -88,6 +92,7 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     }
 
     /*precompute 3x3 determinants for LC computation*/
+    std::cout << "  Computing element determinants" << std::endl;
     for (Tetra &tet:volume.elements) {
         double M[3][3];
         /*loop over vertices*/
@@ -180,24 +185,28 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
             }
 
             /*loop over the tets again looking for one with these three vertices*/
-            for (int m=l+1;m<n_elements;m++) {
-                Tetra &other = volume.elements[m];
+            /*(ejh - only look at elements that share a node with this element)*/
+            for (int n=0; n<4; n++) {
+                for (int m:node_con[tet.con[n]]) {
+                    if (l == m) continue;
+                    Tetra &other = volume.elements[m];
 
-                bool matches[4] = {false,false,false,false};
-                int count = 0;
-                for (int k=0;k<4;k++) {
-                    if (other.con[k]==tet.con[v1] ||
-                        other.con[k]==tet.con[v2] ||
-                        other.con[k]==tet.con[v3]) {count++;matches[k]=true;}
-                }
+                    bool matches[4] = {false,false,false,false};
+                    int count = 0;
+                    for (int k=0;k<4;k++) {
+                        if (other.con[k]==tet.con[v1] ||
+                            other.con[k]==tet.con[v2] ||
+                            other.con[k]==tet.con[v3]) {count++;matches[k]=true;}
+                    }
 
-                /*if three vertices match*/
-                if (count==3) {
-                    tet.cell_con[v] = m;
+                    /*if three vertices match*/
+                    if (count==3) {
+                        tet.cell_con[v] = m;
 
-                    /*set the cell connectivity for the index without a matching vertex to l*/
-                    for (int k=0;k<4;k++)
-                        if(!matches[k]) other.cell_con[k] = l;
+                        /*set the cell connectivity for the index without a matching vertex to l*/
+                        for (int k=0;k<4;k++)
+                            if(!matches[k]) other.cell_con[k] = l;
+                    }
                 }
             }
         }
@@ -206,6 +215,7 @@ bool LoadVolumeMesh(const std::string file_name, Volume &volume) { TRACE_ME;
     /*also compute node volumes by scattering cell volumes,this can only be done after 3x3 dets are computed*/
 
     /*first set all to zero*/
+    std::cout << "  Computing node volumes" << std::endl;
     for (Node &node:volume.nodes) {node.volume=0;}
 
     for (int i=0;i<n_elements;i++) {
