@@ -22,7 +22,7 @@
 #include "FESolver.h"
 
 extern "C" {
-    int dsysv_( char* uplo,
+    void dsysv_( char* uplo,
                 int* n,
                 int* nrhs,
                 double* a,
@@ -34,7 +34,7 @@ extern "C" {
                 int* lwork,
                 int* info );
 
-    int dgesv_( int* n,
+    void dgesv_( int* n,
                 int* nrhs,
                 double* a,
                 int* lda,
@@ -550,10 +550,10 @@ void FESolver::solveLinearLapack(double **A, double *x, double *b) { TRACE_ME;
         }
     }
 
-    int status = dsysv_(&uplo, &n, &nrhs, Amat, &lda, ipiv, Bvec, &ldb, work, &lwork, &info );
-    //int status = dgesv_(&n, &nrhs, Amat, &lda, ipiv, Bvec, &ldb, &info );
+    dsysv_(&uplo, &n, &nrhs, Amat, &lda, ipiv, Bvec, &ldb, work, &lwork, &info );
+    //dgesv_(&n, &nrhs, Amat, &lda, ipiv, Bvec, &ldb, &info );
 
-    if (info != 0 || status != 0) std::cerr << "Lapack failed to work for some reason" << std::endl;
+    if (info != 0) std::cerr << "Lapack failed to work, error code: " << info << std::endl;
 
     for (int i=0; i<neq; i++) {
         x[i] = Bvec[i];

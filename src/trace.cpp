@@ -1,4 +1,5 @@
 /*==============================================================================*
+ *
  * TRACE
  *------------------------------------------------------------------------------*
  * Maintainer: Ed Higgins <ed.higgins@york.ac.uk>
@@ -15,6 +16,10 @@
 
 double _walltime() {
     return omp_get_wtime();
+}
+
+double Trace::calculation_time() {
+    return _walltime() - trace_start;
 }
 
 Trace::Trace(std::string name_): name(std::move(name_)) {

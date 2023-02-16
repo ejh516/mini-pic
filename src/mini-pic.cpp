@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <chrono>
 #include <iomanip>
+#include <omp.h>
 
 #include "parameters.h"
 #include "trace.h"
@@ -28,6 +29,7 @@
 int trace::enabled = 1;
 Trace trace::current = Trace("__TRACE_BASE__");
 
+std::time_t start_time;
 
 /*PROTOTYPES*/
 void write_header(std::ostream& out);
@@ -140,16 +142,21 @@ int main(int argc, char **argv) {
 void write_header(std::ostream &out) {
     out << "MINI-PIC" << std::endl << "========" << std::endl;
 
-    std::time_t t = std::time(nullptr);
-    std::tm tm = *std::localtime(&t);
+    start_time = std::time(nullptr);
+    std::tm tm = *std::localtime(&start_time);
     out << "Simulation started at " << std::put_time(&tm, "%Y-%m-%d, %T") << std::endl;
+#pragma omp master
+    {
+        out << "Running on " << omp_get_max_threads() << " threads" << std::endl;
+    }
     out << std::endl;
 }
 
 void write_footer(std::ostream &out) {
-    std::time_t t = std::time(nullptr);
-    std::tm tm = *std::localtime(&t);
+    std::time_t end_time = std::time(nullptr);
+    std::tm tm = *std::localtime(&end_time);
     out << "Simulation finished at " << std::put_time(&tm, "%Y-%m-%d, %T") << std::endl;
+    out << "Calculation took " << trace::current.calculation_time() << " seconds" << std::endl;
 }
 
 

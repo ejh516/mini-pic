@@ -44,6 +44,7 @@ class Trace {
         Trace(std::string name_);
         std::unordered_map<std::string, TraceElement> function_list;
 
+        double calculation_time();
         void write_callstack();
         void write_profile(std::string filename);
         void enter(std::string func_name);
